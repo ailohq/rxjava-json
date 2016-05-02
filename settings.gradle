@@ -1,0 +1,3 @@
+rootProject.name = 'rxjava-json'
+include 'rxjava-json-core'
+
