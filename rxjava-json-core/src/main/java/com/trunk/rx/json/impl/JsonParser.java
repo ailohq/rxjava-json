@@ -1,11 +1,22 @@
 package com.trunk.rx.json.impl;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.exception.MalformedJsonException;
+import com.trunk.rx.json.path.ArrayIndexToken;
+import com.trunk.rx.json.path.JsonPath;
+import com.trunk.rx.json.path.NoopToken;
+import com.trunk.rx.json.path.ObjectToken;
+import com.trunk.rx.json.path.RootToken;
 import com.trunk.rx.json.token.JsonArray;
 import com.trunk.rx.json.token.JsonBoolean;
+import com.trunk.rx.json.token.JsonDocumentEnd;
 import com.trunk.rx.json.token.JsonName;
 import com.trunk.rx.json.token.JsonNull;
 import com.trunk.rx.json.token.JsonNumber;
@@ -15,7 +26,9 @@ import com.trunk.rx.json.token.JsonToken;
 
 import rx.Subscriber;
 
-public class Parser extends Subscriber<Character> {
+public class JsonParser extends Subscriber<Character> {
+  private static final Logger log = LoggerFactory.getLogger(JsonParser.class);
+
   private static final char[] NON_EXECUTE_PREFIX = ")]}'\n".toCharArray();
   private static final char BOM = '\uFEFF';
 
@@ -72,10 +85,9 @@ public class Parser extends Subscriber<Character> {
    * that array. Otherwise the value is undefined, and we take advantage of that
    * by incrementing pathIndices when doing so isn't useful.
    */
-  private String[] pathNames = new String[32];
-  private int[] pathIndices = new int[32];
+  private JsonPath[] paths = new JsonPath[32];
 
-  public Parser(Subscriber<? super JsonTokenEvent> downstream, boolean lenient) {
+  public JsonParser(Subscriber<? super JsonTokenEvent> downstream, boolean lenient) {
     super(downstream, false);
     this.downstream = downstream;
     this.lenient = lenient;
@@ -92,7 +104,7 @@ public class Parser extends Subscriber<Character> {
         Optional<JsonToken> token = getCurrentValueAndResetBuffer();
         token.ifPresent(t -> {
           emitDownstream(t);
-          pop();
+          popScope();
         });
         if (!token.isPresent()) {
           downstream.onError(syntaxError("Invalid bare token"));
@@ -101,6 +113,7 @@ public class Parser extends Subscriber<Character> {
         }
       }
       if (currentScope() == JsonScope.NONEMPTY_DOCUMENT) {
+        maybeEmitDocumentEnd();
         downstream.onCompleted();
       } else if (currentScope() == JsonScope.EMPTY_DOCUMENT) {
         if (lenient) {
@@ -124,22 +137,27 @@ public class Parser extends Subscriber<Character> {
 
   @Override
   public void onNext(Character c) {
-    System.out.println(c + "\t" + currentStack() + "\t" + getPath());
+    try {
+      log.trace("{}\t{}\t{}", c, currentStack(), getPath());
 
-    if (!downstream.isUnsubscribed() && captureComment(c)) {
-      request(1);
-    } else {
-      doOnNext(c);
-    }
+      if (!downstream.isUnsubscribed() && captureComment(c)) {
+        request(1);
+      } else {
+        doOnNext(c);
+      }
 
-    // so we only count characters once
-    if (c == '\n') {
-      ++lineNumber;
-      columnNumber = 0;
-    } else {
-      ++columnNumber;
+      // so we only count characters once
+      if (c == '\n') {
+        ++lineNumber;
+        columnNumber = 0;
+      } else {
+        ++columnNumber;
+      }
+      firstChar = false;
+    } catch (Throwable t) {
+      log.warn("Unexpected error", t);
+      downstream.onError(t);
     }
-    firstChar = false;
   }
 
   private void doOnNext(char c) {
@@ -207,7 +225,7 @@ public class Parser extends Subscriber<Character> {
         hasSeparator = false;
       }
     } else if (c == '}') {
-      pop(); // order effects jsonPath
+      popScope(); // order effects jsonPath
       emitDownstream(JsonObject.end());
     } else if (c == ',' || (lenient && c == ';')) {
       hasSeparator = true;
@@ -222,7 +240,7 @@ public class Parser extends Subscriber<Character> {
       skipWhitespace();
     } else if (c == '}') {
       emitDownstream(JsonObject.end());
-      pop();
+      popScope();
     } else if (c == '{' || c == '[' || c == ']' || c == ':' || c == '=' || c == ',' || c == ';') {
       downstream.onError(syntaxError("Expected name"));
     } else {
@@ -243,7 +261,7 @@ public class Parser extends Subscriber<Character> {
         emitDownstream(JsonNull.INSTANCE);
         request(1);
       } else if (lenient && c == ']') {
-        pop();
+        popScope();
         emitDownstream(JsonNull.INSTANCE);
         emitDownstream(JsonArray.end());
         request(1);
@@ -258,7 +276,7 @@ public class Parser extends Subscriber<Character> {
         startSimpleValue(c, JsonScope.NONEMPTY_ARRAY);
       }
     } else if (c == ']') {
-      pop(); // order effects jsonPath
+      popScope(); // order effects jsonPath
       emitDownstream(JsonArray.end());
       request(1);
     } else if (c == ',' || (lenient && c == ';')) {
@@ -272,7 +290,7 @@ public class Parser extends Subscriber<Character> {
 
   private void handleEmptyArray(char c) {
     if (c == ']') {
-      pop();
+      popScope();
       emitDownstream(JsonArray.end());
       request(1);
     } else if (isWhitespace(c)) {
@@ -282,7 +300,7 @@ public class Parser extends Subscriber<Character> {
     } else if (c == '{') {
       startObject(JsonScope.NONEMPTY_ARRAY);
     } else if (lenient && (c == ',' || c == ';')) {
-      set(JsonScope.NONEMPTY_ARRAY);
+      setScope(JsonScope.NONEMPTY_ARRAY);
       hasSeparator = true;
       incrementPathIndex();
       emitDownstream(JsonNull.INSTANCE);
@@ -303,7 +321,7 @@ public class Parser extends Subscriber<Character> {
       appendBuffer(c);
       request(1);
     } else {
-      set(JsonScope.BARE_VALUE);
+      setScope(JsonScope.BARE_VALUE);
       handleBareValue(c);
     }
   }
@@ -341,7 +359,7 @@ public class Parser extends Subscriber<Character> {
         unicodeEscapeBuffer[unicodeEscapeBufferOffset] = c;
         ++unicodeEscapeBufferOffset;
         if (unicodeEscapeBufferOffset == unicodeEscapeBuffer.length) {
-          appendBuffer(getEscapedUnicode());
+          appendBuffer(getEscapedUnicode(unicodeEscapeBuffer));
           inUnicodeEscape = false;
         }
         request(1);
@@ -356,7 +374,7 @@ public class Parser extends Subscriber<Character> {
       if (token.isPresent()) {
         token.ifPresent(t -> {
           emitDownstream(t);
-          pop();
+          popScope();
         });
       } else {
         downstream.onError(syntaxError("Invalid value"));
@@ -368,15 +386,7 @@ public class Parser extends Subscriber<Character> {
     }
   }
 
-  private void incrementPathIndex() {
-    pathIndices[stackSize - 1] += 1;
-  }
-
-  private void resetPathIndex() {
-    pathIndices[stackSize - 1] = 0;
-  }
-
-  private char getEscapedUnicode() {
+  public static char getEscapedUnicode(char[] unicodeEscapeBuffer) {
     char result = 0;
     for (char c : unicodeEscapeBuffer) {
       result <<= 4;
@@ -423,11 +433,20 @@ public class Parser extends Subscriber<Character> {
     } else if (isWhitespace(c)) {
       skipWhitespace();
     } else if (c == '{') {
+      maybeEmitDocumentEnd();
       startObject(JsonScope.NONEMPTY_DOCUMENT);
     } else if (c == '[') {
+      maybeEmitDocumentEnd();
       startArray(JsonScope.NONEMPTY_DOCUMENT);
     } else {
+      maybeEmitDocumentEnd();
       startSimpleValue(c, JsonScope.NONEMPTY_DOCUMENT);
+    }
+  }
+
+  private void maybeEmitDocumentEnd() {
+    if (currentScope() == JsonScope.NONEMPTY_DOCUMENT) {
+      downstream.onNext(new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE));
     }
   }
 
@@ -435,7 +454,7 @@ public class Parser extends Subscriber<Character> {
     if (token.isPresent()) {
       token.ifPresent(t -> {
         emitDownstream(t);
-        pop();
+        popScope();
       });
       doOnNext(c);
     } else {
@@ -449,16 +468,16 @@ public class Parser extends Subscriber<Character> {
 
   private void startObject(JsonScope nonEmptyScope) {
     hasSeparator = false;
-    set(nonEmptyScope);
-    push(JsonScope.EMPTY_OBJECT);
+    setScope(nonEmptyScope);
+    pushScope(JsonScope.EMPTY_OBJECT);
     emitDownstream(JsonObject.start());
   }
 
   private void startArray(JsonScope nonEmptyScope) {
     hasSeparator = false;
+    setScope(nonEmptyScope);
+    pushScope(JsonScope.EMPTY_ARRAY);
     resetPathIndex();
-    set(nonEmptyScope);
-    push(JsonScope.EMPTY_ARRAY);
     emitDownstream(JsonArray.start());
   }
 
@@ -481,8 +500,8 @@ public class Parser extends Subscriber<Character> {
     } else {
       numberState = NumberState.NUMBER_CHAR_DIGIT;
     }
-    set(nonEmptyScope);
-    push(JsonScope.NUMBER);
+    setScope(nonEmptyScope);
+    pushScope(JsonScope.NUMBER);
     request(1);
   }
 
@@ -534,8 +553,8 @@ public class Parser extends Subscriber<Character> {
 
   private void startQuotedString(char c, JsonScope nonEmptyScope) {
     stringDelimiter = c;
-    set(nonEmptyScope);
-    push(JsonScope.QUOTED_STRING);
+    setScope(nonEmptyScope);
+    pushScope(JsonScope.QUOTED_STRING);
     request(1);
   }
 
@@ -543,8 +562,8 @@ public class Parser extends Subscriber<Character> {
     if (isControlCharacter(c) && c != '/' && c != '#') {
       downstream.onError(syntaxError("Invalid value"));
     } else {
-      set(nonEmptyScope);
-      push(JsonScope.BARE_VALUE);
+      setScope(nonEmptyScope);
+      pushScope(JsonScope.BARE_VALUE);
       appendBuffer(c);
       request(1);
     }
@@ -644,7 +663,7 @@ public class Parser extends Subscriber<Character> {
     String value = bufferOverflow.append(buffer, 0, bufferOffset).toString();
     resetBuffer();
     if (parentScope == JsonScope.DANGLING_NAME && (lenient || valueScope == JsonScope.QUOTED_STRING)) {
-      pathNames[stackSize - 2] = value;
+      paths[stackSize - 2] = ObjectToken.of(value);
       return Optional.of(JsonName.of(value));
     } else if (parentScope == JsonScope.NONEMPTY_DOCUMENT && valueScope == JsonScope.BARE_VALUE && value.startsWith("/")) {
       return Optional.empty();
@@ -675,19 +694,6 @@ public class Parser extends Subscriber<Character> {
       numberState == NumberState.NUMBER_CHAR_EXP_DIGIT;
   }
 
-  private void resetBuffer() {
-    bufferOffset = 0;
-    bufferOverflow = new StringBuilder();
-  }
-
-  private JsonScope currentScope() {
-    return stack[stackSize-1];
-  }
-
-  private JsonScope parentScope() {
-    return stackSize > 1 ? stack[stackSize-2] : null;
-  }
-
   private String getExpected() {
     JsonScope scope = currentScope();
     if (scope == JsonScope.EMPTY_DOCUMENT) {
@@ -714,26 +720,44 @@ public class Parser extends Subscriber<Character> {
     return "any value";
   }
 
-  private void push(JsonScope newTop) {
+  private void resetBuffer() {
+    bufferOffset = 0;
+    bufferOverflow = new StringBuilder();
+  }
+
+  private void incrementPathIndex() {
+    paths[stackSize - 1] = ((ArrayIndexToken) paths[stackSize - 1]).increment();
+  }
+
+  private void resetPathIndex() {
+    paths[stackSize - 1] = ArrayIndexToken.of(0);
+  }
+
+  private JsonScope currentScope() {
+    return stack[stackSize-1];
+  }
+
+  private JsonScope parentScope() {
+    return stackSize > 1 ? stack[stackSize-2] : null;
+  }
+
+  private void pushScope(JsonScope newTop) {
     if (stackSize == stack.length) {
       JsonScope[] newStack = new JsonScope[stackSize * 2];
-      int[] newPathIndices = new int[stackSize * 2];
-      String[] newPathNames = new String[stackSize * 2];
+      JsonPath[] newPaths = new JsonPath[stackSize * 2];
       System.arraycopy(stack, 0, newStack, 0, stackSize);
-      System.arraycopy(pathIndices, 0, newPathIndices, 0, stackSize);
-      System.arraycopy(pathNames, 0, newPathNames, 0, stackSize);
+      System.arraycopy(paths, 0, newPaths, 0, stackSize);
       stack = newStack;
-      pathIndices = newPathIndices;
-      pathNames = newPathNames;
+      paths = newPaths;
     }
     stack[stackSize++] = newTop;
   }
 
-  private void pop() {
+  private void popScope() {
     stackSize -= 1;
   }
 
-  private void set(JsonScope scope) {
+  private void setScope(JsonScope scope) {
     stack[stackSize - 1] = scope;
   }
 
@@ -772,25 +796,14 @@ public class Parser extends Subscriber<Character> {
    * Returns a <a href="http://goessner.net/articles/JsonPath/">JsonPath</a> to
    * the current location in the JSON value.
    */
-  private String getPath() {
-    StringBuilder result = new StringBuilder().append('$');
+  private JsonPath getPath() {
+    List<JsonPath> tokens = new ArrayList<>();
+    tokens.add(RootToken.INSTANCE);
     for (int i = 0, size = stackSize; i < size; i++) {
-      switch (stack[i]) {
-        case NONEMPTY_ARRAY:
-          result.append('[').append(pathIndices[i]).append(']');
-          break;
-
-        case NONEMPTY_OBJECT:
-          result.append('.');
-          if (pathNames[i] != null) {
-            result.append(pathNames[i]);
-          }
-          break;
-
-        default:
-          break;
+      if (stack[i] == JsonScope.NONEMPTY_OBJECT || stack[i] == JsonScope.NONEMPTY_ARRAY) {
+        tokens.add(paths[i]);
       }
     }
-    return result.toString();
+    return JsonPath.from(tokens);
   }
 }

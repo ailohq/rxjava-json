@@ -1,6 +1,6 @@
 package com.trunk.rx.json;
 
-import com.trunk.rx.json.impl.Parser;
+import com.trunk.rx.json.impl.JsonParser;
 import com.trunk.rx.json.token.JsonToken;
 
 import rx.Observable;
@@ -16,17 +16,22 @@ public class JsonTokenOperator implements Operator<JsonTokenEvent, Character> {
 
   private final boolean lenient;
 
-  public JsonTokenOperator() {
-    this(false);
+  /**
+   * Configure this operator to be strict in what it accepts. Only a single
+   * valid JSON document as specified by <a
+   * href="http://www.ietf.org/rfc/rfc4627.txt">RFC 4627</a>
+   */
+  public static JsonTokenOperator strict() {
+    return new JsonTokenOperator(false);
   }
 
   /**
-   * Configure this operator to be  be liberal in what it accepts. By default,
-   * this operator is strict and only accepts JSON as specified by <a
-   * href="http://www.ietf.org/rfc/rfc4627.txt">RFC 4627</a>. Setting the
+   * Configure this operator to be liberal in what it accepts. Setting the
    * parser to lenient causes it to ignore the following syntax errors:
    *
    * <ul>
+   *   <li>Multiple documents will emitted. Each document will be followed by a
+   *       {@link com.trunk.rx.json.token.JsonDocumentEnd} token.
    *   <li>Streams that start with the <a href="#nonexecuteprefix">non-execute
    *       prefix</a>, <code>")]}'\n"</code>.
    *   <li>Streams that include multiple top-level values. With strict parsing,
@@ -49,18 +54,18 @@ public class JsonTokenOperator implements Operator<JsonTokenEvent, Character> {
    *   <li>Name/value pairs separated by {@code ;} instead of {@code ,}.
    * </ul>
    */
-  private JsonTokenOperator(boolean lenient) {
-    this.lenient = lenient;
+  public static JsonTokenOperator lenient() {
+    return new JsonTokenOperator(true);
   }
 
-  public JsonTokenOperator lenient() {
-    return new JsonTokenOperator(true);
+  private JsonTokenOperator(boolean lenient) {
+    this.lenient = lenient;
   }
 
   @Override
   public Subscriber<? super Character> call(Subscriber<? super JsonTokenEvent> s) {
     Subscriber<? super JsonTokenEvent> downstream = new SerializedSubscriber<>(s);
-    Subscriber<Character> upstream = new Parser(downstream, lenient);
+    Subscriber<Character> upstream = new JsonParser(downstream, lenient);
     downstream.add(upstream);
     return upstream;
   }

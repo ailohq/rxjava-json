@@ -16,15 +16,13 @@
 
 package com.trunk.rx.json.exception;
 
-import java.io.IOException;
-
-import com.trunk.rx.json._impl.JsonReader;
+import com.trunk.rx.json.JsonTokenOperator;
 
 /**
  * Thrown when a reader encounters malformed JSON. Some syntax errors can be
- * ignored by calling {@link JsonReader#setLenient(boolean)}.
+ * ignored by calling {@link JsonTokenOperator#lenient()}.
  */
-public final class MalformedJsonException extends IOException {
+public final class MalformedJsonException extends RuntimeException {
   private static final long serialVersionUID = 1L;
 
   public MalformedJsonException(String msg) {

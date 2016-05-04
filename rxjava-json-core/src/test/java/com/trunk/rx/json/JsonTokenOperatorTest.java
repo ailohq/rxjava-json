@@ -11,19 +11,11 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.trunk.rx.StringObservable;
+import com.trunk.rx.string.StringObservable;
 import com.trunk.rx.json.exception.MalformedJsonException;
-import com.trunk.rx.json.token.JsonArray;
-import com.trunk.rx.json.token.JsonArrayEnd;
-import com.trunk.rx.json.token.JsonArrayStart;
-import com.trunk.rx.json.token.JsonBoolean;
-import com.trunk.rx.json.token.JsonName;
-import com.trunk.rx.json.token.JsonNull;
-import com.trunk.rx.json.token.JsonNumber;
-import com.trunk.rx.json.token.JsonObject;
-import com.trunk.rx.json.token.JsonObjectStart;
-import com.trunk.rx.json.token.JsonString;
-import com.trunk.rx.json.token.JsonToken;
+import com.trunk.rx.json.path.JsonPath;
+import com.trunk.rx.json.path.NoopToken;
+import com.trunk.rx.json.token.*;
 
 import rx.Observable;
 import rx.observers.TestSubscriber;
@@ -32,8 +24,8 @@ import static org.testng.Assert.assertEquals;
 
 public class JsonTokenOperatorTest {
 
-  private static final JsonTokenOperator BASE_PARSER = new JsonTokenOperator();
-  public static final JsonTokenOperator LENIENT_PARSER = BASE_PARSER.lenient();
+  private static final JsonTokenOperator BASE_PARSER = JsonTokenOperator.strict();
+  public static final JsonTokenOperator LENIENT_PARSER = JsonTokenOperator.lenient();
 
   @Test
   public void shouldReturnNoTokensForEmptyUpstream() throws Exception {
@@ -101,7 +93,7 @@ public class JsonTokenOperatorTest {
     should("return empty object")
       .given(BASE_PARSER)
       .when("{}")
-      .then(JsonObject.start(), JsonObject.end())
+      .then(JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -111,7 +103,7 @@ public class JsonTokenOperatorTest {
     should("return empty object with whitespace")
       .given(BASE_PARSER)
       .when(" { } ")
-      .then(JsonObject.start(), JsonObject.end())
+      .then(JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -121,7 +113,7 @@ public class JsonTokenOperatorTest {
     should("return empty array")
       .given(BASE_PARSER)
       .when("[]")
-      .then(JsonArray.start(), JsonArray.end())
+      .then(JsonArray.start(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -131,7 +123,7 @@ public class JsonTokenOperatorTest {
     should("return empty array with whitespace")
       .given(BASE_PARSER)
       .when(" [ ] ")
-      .then(JsonArray.start(), JsonArray.end())
+      .then(JsonArray.start(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -141,7 +133,7 @@ public class JsonTokenOperatorTest {
     should("return simple number")
       .given(BASE_PARSER)
       .when("1")
-      .then(JsonNumber.of("1"))
+      .then(JsonNumber.of("1"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -151,7 +143,7 @@ public class JsonTokenOperatorTest {
     should("return decimal number")
       .given(BASE_PARSER)
       .when("1.1")
-      .then(JsonNumber.of("1.1"))
+      .then(JsonNumber.of("1.1"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -161,7 +153,7 @@ public class JsonTokenOperatorTest {
     should("return exponential number")
       .given(BASE_PARSER)
       .when("1e2")
-      .then(JsonNumber.of("1e2"))
+      .then(JsonNumber.of("1e2"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -171,7 +163,7 @@ public class JsonTokenOperatorTest {
     should("return exponential number with positive sign")
       .given(BASE_PARSER)
       .when("1e+2")
-      .then(JsonNumber.of("1e+2"))
+      .then(JsonNumber.of("1e+2"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -181,7 +173,7 @@ public class JsonTokenOperatorTest {
     should("return exponential number with negative sign")
       .given(BASE_PARSER)
       .when("1e-2")
-      .then(JsonNumber.of("1e-2"))
+      .then(JsonNumber.of("1e-2"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -191,7 +183,7 @@ public class JsonTokenOperatorTest {
     should("return exponential number with decimal")
       .given(BASE_PARSER)
       .when("1.1e2")
-      .then(JsonNumber.of("1.1e2"))
+      .then(JsonNumber.of("1.1e2"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -201,7 +193,7 @@ public class JsonTokenOperatorTest {
     should("return exponential number with decimal and positive sign")
       .given(BASE_PARSER)
       .when("1.1e+2")
-      .then(JsonNumber.of("1.1e+2"))
+      .then(JsonNumber.of("1.1e+2"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -211,7 +203,7 @@ public class JsonTokenOperatorTest {
     should("return exponential number with decimal and negative sign")
       .given(BASE_PARSER)
       .when("1.1e-2")
-      .then(JsonNumber.of("1.1e-2"))
+      .then(JsonNumber.of("1.1e-2"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -221,7 +213,7 @@ public class JsonTokenOperatorTest {
     should("return very long number")
       .given(BASE_PARSER)
       .when(longString("1", 100_000))
-      .then(JsonNumber.of(longString("1", 100_000)))
+      .then(JsonNumber.of(longString("1", 100_000)), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -266,7 +258,8 @@ public class JsonTokenOperatorTest {
         JsonNumber.of("NaN"),
         JsonNumber.of("-Infinity"),
         JsonNumber.of("Infinity"),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -287,7 +280,7 @@ public class JsonTokenOperatorTest {
     should("convert octal prefix to string when lenient")
       .given(LENIENT_PARSER)
       .when("[03]")
-      .then(JsonArray.start(), JsonString.of("03"), JsonArray.end())
+      .then(JsonArray.start(), JsonString.of("03"), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -353,7 +346,7 @@ public class JsonTokenOperatorTest {
     should("return simple string")
       .given(BASE_PARSER)
       .when("\"s\"")
-      .then(JsonString.of("s"))
+      .then(JsonString.of("s"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -363,7 +356,7 @@ public class JsonTokenOperatorTest {
     should("return number in string as string")
       .given(BASE_PARSER)
       .when("\"1\"")
-      .then(JsonString.of("1"))
+      .then(JsonString.of("1"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -374,7 +367,7 @@ public class JsonTokenOperatorTest {
     should("return very long string")
       .given(BASE_PARSER)
       .when("\"" + s + "\"")
-      .then(JsonString.of(s))
+      .then(JsonString.of(s), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -384,7 +377,7 @@ public class JsonTokenOperatorTest {
     should("ignore // comments in string")
       .given(BASE_PARSER)
       .when("\"// comment\"")
-      .then(JsonString.of("// comment"))
+      .then(JsonString.of("// comment"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -394,7 +387,7 @@ public class JsonTokenOperatorTest {
     should("ignore # comments in string")
       .given(BASE_PARSER)
       .when("\"# comment\"")
-      .then(JsonString.of("# comment"))
+      .then(JsonString.of("# comment"), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -444,7 +437,7 @@ public class JsonTokenOperatorTest {
     should("allow unquoted strings when lenient")
       .given(LENIENT_PARSER)
       .when("[a]")
-      .then(JsonArray.start(), JsonString.of("a"), JsonArray.end())
+      .then(JsonArray.start(), JsonString.of("a"), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -454,7 +447,7 @@ public class JsonTokenOperatorTest {
     should("allow single quoted strings when lenient")
       .given(LENIENT_PARSER)
       .when("['a']")
-      .then(JsonArray.start(), JsonString.of("a"), JsonArray.end())
+      .then(JsonArray.start(), JsonString.of("a"), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -514,7 +507,8 @@ public class JsonTokenOperatorTest {
         JsonString.of("\0"),
         JsonString.of("\u0019"),
         JsonString.of("\u20AC"),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .run();
   }
@@ -584,7 +578,7 @@ public class JsonTokenOperatorTest {
     should("return boolean true")
       .given(BASE_PARSER)
       .when("true")
-      .then(JsonBoolean.True())
+      .then(JsonBoolean.True(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -594,7 +588,7 @@ public class JsonTokenOperatorTest {
     should("return boolean false")
       .given(BASE_PARSER)
       .when("false")
-      .then(JsonBoolean.False())
+      .then(JsonBoolean.False(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -604,7 +598,7 @@ public class JsonTokenOperatorTest {
     should("return null")
       .given(BASE_PARSER)
       .when("null")
-      .then(JsonNull.INSTANCE)
+      .then(JsonNull.INSTANCE, JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -622,7 +616,8 @@ public class JsonTokenOperatorTest {
         JsonBoolean.False(),
         JsonNull.INSTANCE,
         JsonNull.INSTANCE,
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -638,7 +633,8 @@ public class JsonTokenOperatorTest {
         JsonString.of("true"),
         JsonString.of("false"),
         JsonString.of("null"),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -654,7 +650,8 @@ public class JsonTokenOperatorTest {
         JsonString.of("true"),
         JsonString.of("false"),
         JsonString.of("null"),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -669,7 +666,8 @@ public class JsonTokenOperatorTest {
         JsonObject.start(),
         JsonName.of("hello"),
         JsonString.of("world"),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -710,7 +708,8 @@ public class JsonTokenOperatorTest {
         JsonObject.start(),
         JsonName.of("a"),
         JsonString.of("b"),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -725,7 +724,8 @@ public class JsonTokenOperatorTest {
         JsonObject.start(),
         JsonName.of("a"),
         JsonString.of("b"),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -750,7 +750,8 @@ public class JsonTokenOperatorTest {
         JsonObject.start(),
         JsonName.of("a"),
         JsonString.of("b"),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -775,7 +776,8 @@ public class JsonTokenOperatorTest {
         JsonObject.start(),
         JsonName.of("a"),
         JsonString.of("b"),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -802,7 +804,8 @@ public class JsonTokenOperatorTest {
         JsonBoolean.True(),
         JsonName.of("b"),
         JsonBoolean.True(),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -817,7 +820,8 @@ public class JsonTokenOperatorTest {
         JsonArray.start(),
         JsonBoolean.True(),
         JsonBoolean.False(),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       ).run();
   }
 
@@ -840,7 +844,8 @@ public class JsonTokenOperatorTest {
         JsonArray.start(),
         JsonBoolean.True(),
         JsonBoolean.True(),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -896,7 +901,8 @@ public class JsonTokenOperatorTest {
         JsonBoolean.True(),
         JsonNull.INSTANCE,
         JsonBoolean.True(),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -911,7 +917,8 @@ public class JsonTokenOperatorTest {
         JsonArray.start(),
         JsonBoolean.True(),
         JsonNull.INSTANCE,
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -926,7 +933,8 @@ public class JsonTokenOperatorTest {
         JsonArray.start(),
         JsonNull.INSTANCE,
         JsonBoolean.True(),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -941,7 +949,8 @@ public class JsonTokenOperatorTest {
         JsonArray.start(),
         JsonNull.INSTANCE,
         JsonNull.INSTANCE,
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -1064,7 +1073,7 @@ public class JsonTokenOperatorTest {
     should("allow // comments when lenient")
       .given(LENIENT_PARSER)
       .when("[ // comment\n true]")
-      .then(JsonArray.start(), JsonBoolean.True(), JsonArray.end())
+      .then(JsonArray.start(), JsonBoolean.True(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1074,7 +1083,7 @@ public class JsonTokenOperatorTest {
     should("allow // comments when lenient")
       .given(LENIENT_PARSER)
       .when("[foo,// comment\n bar //comment\n]")
-      .then(JsonArray.start(), JsonString.of("foo"), JsonString.of("bar"), JsonArray.end())
+      .then(JsonArray.start(), JsonString.of("foo"), JsonString.of("bar"), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1093,7 +1102,8 @@ public class JsonTokenOperatorTest {
         JsonName.of("x"),
         JsonString.of("y"),
         JsonObject.end(),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -1104,7 +1114,7 @@ public class JsonTokenOperatorTest {
     should("allow # comments when lenient")
       .given(LENIENT_PARSER)
       .when("[ # comment\n true]")
-      .then(JsonArray.start(), JsonBoolean.True(), JsonArray.end())
+      .then(JsonArray.start(), JsonBoolean.True(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1114,7 +1124,7 @@ public class JsonTokenOperatorTest {
     should("allow # comments when lenient")
       .given(LENIENT_PARSER)
       .when("[foo # comment\n, bar]")
-      .then(JsonArray.start(), JsonString.of("foo"), JsonString.of("bar"), JsonArray.end())
+      .then(JsonArray.start(), JsonString.of("foo"), JsonString.of("bar"), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1133,7 +1143,8 @@ public class JsonTokenOperatorTest {
         JsonName.of("x"),
         JsonString.of("y"),
         JsonObject.end(),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -1144,7 +1155,7 @@ public class JsonTokenOperatorTest {
     should("allow /**/ comments when lenient")
       .given(LENIENT_PARSER)
       .when("[ /* comment */ true]")
-      .then(JsonArray.start(), JsonBoolean.True(), JsonArray.end())
+      .then(JsonArray.start(), JsonBoolean.True(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1154,7 +1165,7 @@ public class JsonTokenOperatorTest {
     should("allow /**/ comments when lenient")
       .given(LENIENT_PARSER)
       .when("[foo, /* comment */ bar]")
-      .then(JsonArray.start(), JsonString.of("foo"), JsonString.of("bar"), JsonArray.end())
+      .then(JsonArray.start(), JsonString.of("foo"), JsonString.of("bar"), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1173,7 +1184,8 @@ public class JsonTokenOperatorTest {
         JsonName.of("x"),
         JsonString.of("y"),
         JsonObject.end(),
-        JsonArray.end()
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -1197,9 +1209,12 @@ public class JsonTokenOperatorTest {
       .then(
         JsonArray.start(),
         JsonArray.end(),
+        JsonDocumentEnd.INSTANCE,
         JsonBoolean.True(),
+        JsonDocumentEnd.INSTANCE,
         JsonObject.start(),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED)
       .run();
@@ -1237,7 +1252,7 @@ public class JsonTokenOperatorTest {
     should("allow non execute prefix when lenient")
       .given(LENIENT_PARSER)
       .when(")]}'\n []")
-      .then(JsonArray.start(), JsonArray.end())
+      .then(JsonArray.start(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1256,7 +1271,7 @@ public class JsonTokenOperatorTest {
     should("allow non execute prefix with leading whitespace when lenient")
       .given(LENIENT_PARSER)
       .when("\r\n \t)]}'\n []")
-      .then(JsonArray.start(), JsonArray.end())
+      .then(JsonArray.start(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1266,7 +1281,7 @@ public class JsonTokenOperatorTest {
     should("ignore Bom as first character")
       .given(BASE_PARSER)
       .when("\ufeff[]")
-      .then(JsonArray.start(), JsonArray.end())
+      .then(JsonArray.start(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1388,6 +1403,7 @@ public class JsonTokenOperatorTest {
         ImmutableList.builder()
           .addAll(repeat(JsonArray.start(), 40))
           .addAll(repeat(JsonArray.end(), 40))
+          .add(JsonDocumentEnd.INSTANCE)
           .build().toArray(new JsonToken[0])
       )
       .run();
@@ -1452,7 +1468,7 @@ public class JsonTokenOperatorTest {
     should("allow top level unquoted string when lenient")
       .given(LENIENT_PARSER)
       .when(longString("x", 1024 * 16))
-      .then(JsonString.of(longString("x", 1024 * 16)))
+      .then(JsonString.of(longString("x", 1024 * 16)), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED)
       .run();
   }
@@ -1466,7 +1482,8 @@ public class JsonTokenOperatorTest {
         JsonObject.start(),
         JsonName.of(""),
         JsonBoolean.True(),
-        JsonObject.end()
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE
       )
       .then(Is.COMPLETED).run();
   }
@@ -1492,7 +1509,7 @@ public class JsonTokenOperatorTest {
       given(LENIENT_PARSER).when("{\"name\"=>\"string\",").thenType(JsonObjectStart.class, JsonName.class, JsonString.class).then(MalformedJsonException.class),
       given(LENIENT_PARSER).when("{\"name\"=>\"string\",\"name\"").thenType(JsonObjectStart.class, JsonName.class, JsonString.class, JsonName.class).then(MalformedJsonException.class),
       given(LENIENT_PARSER).when("[}").thenType(JsonArrayStart.class).then(MalformedJsonException.class),
-      given(LENIENT_PARSER).when("[,]").thenType(JsonArrayStart.class, JsonNull.class, JsonNull.class, JsonArrayEnd.class).then(Is.COMPLETED),
+      given(LENIENT_PARSER).when("[,]").thenType(JsonArrayStart.class, JsonNull.class, JsonNull.class, JsonArrayEnd.class, JsonDocumentEnd.class).then(Is.COMPLETED),
       given(LENIENT_PARSER).when("{").thenType(JsonObjectStart.class).then(MalformedJsonException.class),
       given(LENIENT_PARSER).when("{\"name\"").thenType(JsonObjectStart.class, JsonName.class).then(MalformedJsonException.class),
       given(LENIENT_PARSER).when("{\"name\",").thenType(JsonObjectStart.class, JsonName.class).then(MalformedJsonException.class),
@@ -1521,52 +1538,53 @@ public class JsonTokenOperatorTest {
   public void shouldReturnPathWIthEachEvent() throws Exception {
     TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
     Observable.just("{\"a\":1234,\"b\":[1,2,3,4],\"c\":{\"w\":[5,6,7,8],\"x\":true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
-      .compose(StringObservable.toCharacter())
+      .lift(StringObservable.toCharacter())
       .lift(BASE_PARSER)
       .subscribe(ts);
 
     ts.assertNoErrors();
     ts.assertCompleted();
     ts.assertValues(
-      new JsonTokenEvent(JsonObject.start(), "$"),
+      new JsonTokenEvent(JsonObject.start(), JsonPath.parse("$")),
 
-      new JsonTokenEvent(JsonName.of("a"), "$"),
-      new JsonTokenEvent(JsonNumber.of("1234"), "$.a"),
+      new JsonTokenEvent(JsonName.of("a"), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonNumber.of("1234"), JsonPath.parse("$.a")),
 
-      new JsonTokenEvent(JsonName.of("b"), "$"),
-      new JsonTokenEvent(JsonArray.start(), "$.b"),
-      new JsonTokenEvent(JsonNumber.of("1"), "$.b[0]"),
-      new JsonTokenEvent(JsonNumber.of("2"), "$.b[1]"),
-      new JsonTokenEvent(JsonNumber.of("3"), "$.b[2]"),
-      new JsonTokenEvent(JsonNumber.of("4"), "$.b[3]"),
-      new JsonTokenEvent(JsonArray.end(), "$.b"),
+      new JsonTokenEvent(JsonName.of("b"), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.b")),
+      new JsonTokenEvent(JsonNumber.of("1"), JsonPath.parse("$.b[0]")),
+      new JsonTokenEvent(JsonNumber.of("2"), JsonPath.parse("$.b[1]")),
+      new JsonTokenEvent(JsonNumber.of("3"), JsonPath.parse("$.b[2]")),
+      new JsonTokenEvent(JsonNumber.of("4"), JsonPath.parse("$.b[3]")),
+      new JsonTokenEvent(JsonArray.end(), JsonPath.parse("$.b")),
 
-      new JsonTokenEvent(JsonName.of("c"), "$"),
-      new JsonTokenEvent(JsonObject.start(), "$.c"),
-      new JsonTokenEvent(JsonName.of("w"), "$.c"),
-      new JsonTokenEvent(JsonArray.start(), "$.c.w"),
-      new JsonTokenEvent(JsonNumber.of("5"), "$.c.w[0]"),
-      new JsonTokenEvent(JsonNumber.of("6"), "$.c.w[1]"),
-      new JsonTokenEvent(JsonNumber.of("7"), "$.c.w[2]"),
-      new JsonTokenEvent(JsonNumber.of("8"), "$.c.w[3]"),
-      new JsonTokenEvent(JsonArray.end(), "$.c.w"),
-      new JsonTokenEvent(JsonName.of("x"), "$.c"),
-      new JsonTokenEvent(JsonBoolean.True(), "$.c.x"),
-      new JsonTokenEvent(JsonName.of("y"), "$.c"),
-      new JsonTokenEvent(JsonBoolean.False(), "$.c.y"),
-      new JsonTokenEvent(JsonName.of("z"), "$.c"),
-      new JsonTokenEvent(JsonNull.INSTANCE, "$.c.z"),
-      new JsonTokenEvent(JsonObject.end(), "$.c"),
+      new JsonTokenEvent(JsonName.of("c"), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonObject.start(), JsonPath.parse("$.c")),
+      new JsonTokenEvent(JsonName.of("w"), JsonPath.parse("$.c")),
+      new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.c.w")),
+      new JsonTokenEvent(JsonNumber.of("5"), JsonPath.parse("$.c.w[0]")),
+      new JsonTokenEvent(JsonNumber.of("6"), JsonPath.parse("$.c.w[1]")),
+      new JsonTokenEvent(JsonNumber.of("7"),JsonPath.parse( "$.c.w[2]")),
+      new JsonTokenEvent(JsonNumber.of("8"), JsonPath.parse("$.c.w[3]")),
+      new JsonTokenEvent(JsonArray.end(), JsonPath.parse("$.c.w")),
+      new JsonTokenEvent(JsonName.of("x"), JsonPath.parse("$.c")),
+      new JsonTokenEvent(JsonBoolean.True(), JsonPath.parse("$.c.x")),
+      new JsonTokenEvent(JsonName.of("y"), JsonPath.parse("$.c")),
+      new JsonTokenEvent(JsonBoolean.False(), JsonPath.parse("$.c.y")),
+      new JsonTokenEvent(JsonName.of("z"),JsonPath.parse( "$.c")),
+      new JsonTokenEvent(JsonNull.INSTANCE, JsonPath.parse("$.c.z")),
+      new JsonTokenEvent(JsonObject.end(), JsonPath.parse("$.c")),
 
-      new JsonTokenEvent(JsonName.of("d"), "$"),
-      new JsonTokenEvent(JsonArray.start(), "$.d"),
-      new JsonTokenEvent(JsonObject.start(), "$.d[0]"),
-      new JsonTokenEvent(JsonName.of("1"), "$.d[0]"),
-      new JsonTokenEvent(JsonString.of("1"), "$.d[0].1"),
-      new JsonTokenEvent(JsonObject.end(), "$.d[0]"),
-      new JsonTokenEvent(JsonArray.end(), "$.d"),
+      new JsonTokenEvent(JsonName.of("d"), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.d")),
+      new JsonTokenEvent(JsonObject.start(), JsonPath.parse("$.d[0]")),
+      new JsonTokenEvent(JsonName.of("1"), JsonPath.parse("$.d[0]")),
+      new JsonTokenEvent(JsonString.of("1"), JsonPath.parse("$.d[0]['1']")),
+      new JsonTokenEvent(JsonObject.end(), JsonPath.parse("$.d[0]")),
+      new JsonTokenEvent(JsonArray.end(), JsonPath.parse("$.d")),
 
-      new JsonTokenEvent(JsonObject.end(), "$")
+      new JsonTokenEvent(JsonObject.end(), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE)
     );
   }
 
@@ -1574,29 +1592,51 @@ public class JsonTokenOperatorTest {
   public void shouldReturnCorrectPathForMultipleDocumentsWhenLenient() throws Exception {
     TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
     Observable.just("{\"a\":1234} true [1,2,3] false")
-      .compose(StringObservable.toCharacter())
+      .lift(StringObservable.toCharacter())
       .lift(LENIENT_PARSER)
       .subscribe(ts);
 
     ts.assertNoErrors();
     ts.assertCompleted();
     ts.assertValues(
-      new JsonTokenEvent(JsonObject.start(), "$"),
+      new JsonTokenEvent(JsonObject.start(), JsonPath.parse("$")),
 
-      new JsonTokenEvent(JsonName.of("a"), "$"),
-      new JsonTokenEvent(JsonNumber.of("1234"), "$.a"),
-      new JsonTokenEvent(JsonObject.end(), "$"),
+      new JsonTokenEvent(JsonName.of("a"), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonNumber.of("1234"), JsonPath.parse("$.a")),
+      new JsonTokenEvent(JsonObject.end(), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE),
 
-      new JsonTokenEvent(JsonBoolean.True(), "$"),
+      new JsonTokenEvent(JsonBoolean.True(), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE),
 
-      new JsonTokenEvent(JsonArray.start(), "$"),
-      new JsonTokenEvent(JsonNumber.of("1"), "$[0]"),
-      new JsonTokenEvent(JsonNumber.of("2"), "$[1]"),
-      new JsonTokenEvent(JsonNumber.of("3"), "$[2]"),
-      new JsonTokenEvent(JsonArray.end(), "$"),
+      new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonNumber.of("1"), JsonPath.parse("$[0]")),
+      new JsonTokenEvent(JsonNumber.of("2"), JsonPath.parse("$[1]")),
+      new JsonTokenEvent(JsonNumber.of("3"), JsonPath.parse("$[2]")),
+      new JsonTokenEvent(JsonArray.end(), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE),
 
-      new JsonTokenEvent(JsonBoolean.False(), "$")
+      new JsonTokenEvent(JsonBoolean.False(), JsonPath.parse("$")),
+      new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE)
     );
+  }
+
+  @Test
+  public void shouldExitEarly() throws Exception {
+    StringBuilder buf = new StringBuilder();
+    Observable.just("{\"a\":\"b\"} true [1,2,3] false")
+      .lift(StringObservable.toCharacter())
+      .doOnNext(c -> buf.append(c))
+      .lift(LENIENT_PARSER)
+      .take(3)
+      .subscribe();
+
+    assertEquals(buf.toString(), "{\"a\":\"b\"");
+  }
+
+  @Test
+  public void shouldSendBackPressureUpstream() throws Exception {
+
   }
 
   private JsonToken[] bigObjectTokens() {
@@ -1610,10 +1650,11 @@ public class JsonTokenOperatorTest {
     for (int i = 0; i < 40; i++) {
       builder.add(JsonObject.end());
     }
+    builder.add(JsonDocumentEnd.INSTANCE);
     return builder.build().toArray(new JsonToken[0]);
   }
 
-  private String bigObject() {
+  public static String bigObject() {
     String array = "{\"a\":%s}";
     String json = "true";
     for (int i = 0; i < 40; i++) {
@@ -1642,7 +1683,7 @@ public class JsonTokenOperatorTest {
     return should("reject malformed numbers " + number)
       .given(LENIENT_PARSER)
       .when("[" + number + "]")
-      .then(JsonArray.start(), JsonString.of(number), JsonArray.end())
+      .then(JsonArray.start(), JsonString.of(number), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(Is.COMPLETED);
   }
 
@@ -1749,7 +1790,7 @@ public class JsonTokenOperatorTest {
       try {
         TestSubscriber<JsonToken> ts = new TestSubscriber<>();
         Observable.from(jsonFragments)
-          .compose(StringObservable.toCharacter())
+          .lift(StringObservable.toCharacter())
           .lift(jsonTokenOperator)
           .map(e -> e.getToken())
           .subscribe(ts);

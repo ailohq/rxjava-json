@@ -1,9 +1,8 @@
-package com.trunk.rx;
+package com.trunk.rx.string;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 import rx.Observable;
-import rx.Observable.Transformer;
 import rx.Producer;
 import rx.Subscriber;
 import rx.internal.operators.BackpressureUtils;
@@ -14,8 +13,8 @@ public class StringObservable {
     return Observable.create(new StringToChar(s));
   }
 
-  public static Transformer<String, Character> toCharacter(){
-    return stringObservable -> stringObservable.flatMap(s -> from(s));
+  public static Observable.Operator<Character, String> toCharacter() {
+    return new OperatorStringToChar();
   }
 
   private static class StringToChar implements Observable.OnSubscribe<Character> {

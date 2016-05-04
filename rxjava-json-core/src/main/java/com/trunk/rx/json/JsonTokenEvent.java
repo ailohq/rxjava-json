@@ -2,13 +2,14 @@ package com.trunk.rx.json;
 
 import java.util.Objects;
 
+import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.token.JsonToken;
 
 public class JsonTokenEvent {
   private final JsonToken token;
-  private final String jsonPath;
+  private final JsonPath jsonPath;
 
-  public JsonTokenEvent(JsonToken token, String jsonPath) {
+  public JsonTokenEvent(JsonToken token, JsonPath jsonPath) {
     this.token = token;
     this.jsonPath = jsonPath;
   }
@@ -17,7 +18,7 @@ public class JsonTokenEvent {
     return token;
   }
 
-  public String getJsonPath() {
+  public JsonPath getJsonPath() {
     return jsonPath;
   }
 
