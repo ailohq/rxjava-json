@@ -299,7 +299,7 @@ public class JsonPathTransformerTest {
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 1);
-//    assertEquals(emitted[0], 1);
+    assertEquals(emitted[0], 1);
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 2);

@@ -1636,7 +1636,19 @@ public class JsonTokenOperatorTest {
 
   @Test
   public void shouldSendBackPressureUpstream() throws Exception {
+    TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
+    ts.requestMore(0);
+    int[] emitted = {0};
+    StringObservable.from(" true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],\"x\":true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
+      .doOnNext(c -> emitted[0] += 1)
+      .lift(LENIENT_PARSER)
+      .subscribe(ts);
 
+    ts.assertNoValues();
+
+    ts.requestMore(1);
+    assertEquals(ts.getOnNextEvents().size(), 1);
+    assertEquals(emitted[0], 5);
   }
 
   private JsonToken[] bigObjectTokens() {
@@ -1732,8 +1744,8 @@ public class JsonTokenOperatorTest {
 
     private final String[] jsonFragments;
     private final Optional<JsonToken[]> expectedTokens;
-    private final Optional<Class<? extends JsonToken>[]> expectedTokenTypes;
-    private final Optional<Class<? extends Throwable>> error;
+    private final Optional<Class[]> expectedTokenTypes;
+    private final Optional<Class> error;
     private final Optional<String> message;
     private final Optional<Is> completed;
     private final JsonTokenOperator jsonTokenOperator;
@@ -1741,8 +1753,8 @@ public class JsonTokenOperatorTest {
 
     private TestItem(String[] jsonFragments,
                      Optional<JsonToken[]> expectedTokens,
-                     Optional<Class<? extends JsonToken>[]> expectedTokenTypes,
-                     Optional<Class<? extends Throwable>> error,
+                     Optional<Class[]> expectedTokenTypes,
+                     Optional<Class> error,
                      Optional<String> message,
                      Optional<Is> completed,
                      String description,
@@ -1770,7 +1782,7 @@ public class JsonTokenOperatorTest {
       return new TestItem(jsonFragments, Optional.of(expectedTokens), expectedTokenTypes, error, message, completed, description, jsonTokenOperator);
     }
 
-    public TestItem thenType(Class<? extends JsonToken>... expectedTokenTypes) {
+    public TestItem thenType(Class... expectedTokenTypes) {
       return new TestItem(jsonFragments, expectedTokens, Optional.of(expectedTokenTypes), error, message, completed, description, jsonTokenOperator);
     }
 

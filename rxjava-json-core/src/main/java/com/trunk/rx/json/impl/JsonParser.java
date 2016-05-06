@@ -73,6 +73,8 @@ public class JsonParser extends Subscriber<Character> {
   private boolean maybeStartComment = false;
   private boolean maybeEndComment = false;
 
+  private boolean emitted = false;
+
   {
     stack[stackSize++] = JsonScope.EMPTY_DOCUMENT;
   }
@@ -138,7 +140,9 @@ public class JsonParser extends Subscriber<Character> {
   @Override
   public void onNext(Character c) {
     try {
-      log.trace("{}\t{}\t{}", c, currentStack(), getPath());
+      log.info("{}", c);
+
+      emitted = false;
 
       if (!downstream.isUnsubscribed() && captureComment(c)) {
         request(1);
@@ -154,6 +158,11 @@ public class JsonParser extends Subscriber<Character> {
         ++columnNumber;
       }
       firstChar = false;
+
+      if (!emitted) {
+        request(1);
+      }
+
     } catch (Throwable t) {
       log.warn("Unexpected error", t);
       downstream.onError(t);
@@ -162,6 +171,7 @@ public class JsonParser extends Subscriber<Character> {
 
   private void doOnNext(char c) {
     if (!downstream.isUnsubscribed()) {
+      log.info(" -{}\t{}", currentStack(), getPath());
       JsonScope scope = currentScope();
       if (scope == JsonScope.EMPTY_DOCUMENT) {
         handleEmptyDocument(c);
@@ -789,6 +799,7 @@ public class JsonParser extends Subscriber<Character> {
   }
 
   private void emitDownstream(JsonToken token) {
+    emitted = true;
     downstream.onNext(new JsonTokenEvent(token, getPath()));
   }
 
