@@ -13,6 +13,7 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.trunk.rx.json.exception.MalformedJsonException;
+import com.trunk.rx.json.operator.OperatorJsonToken;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.path.NoopToken;
 import com.trunk.rx.json.token.JsonArray;
@@ -30,7 +31,6 @@ import com.trunk.rx.json.token.JsonToken;
 import com.trunk.rx.string.StringObservable;
 
 import rx.Observable;
-import rx.Subscriber;
 import rx.Subscription;
 import rx.observers.TestSubscriber;
 import rx.schedulers.Schedulers;
@@ -39,8 +39,8 @@ import static org.testng.Assert.assertEquals;
 
 public class OperatorJsonTokenTest {
 
-  private static final OperatorJsonToken BASE_PARSER = OperatorJsonToken.strict();
-  private static final OperatorJsonToken LENIENT_PARSER = OperatorJsonToken.lenient();
+  private static final OperatorJsonToken BASE_PARSER = new OperatorJsonToken();
+  private static final OperatorJsonToken LENIENT_PARSER = BASE_PARSER.lenient();
 
   @Test
   public void shouldReturnNoTokensForEmptyUpstream() throws Exception {

@@ -16,7 +16,7 @@
 
 package com.trunk.rx.json.exception;
 
-import com.trunk.rx.json.OperatorJsonToken;
+import com.trunk.rx.json.operator.OperatorJsonToken;
 
 /**
  * Thrown when a reader encounters malformed JSON. Some syntax errors can be

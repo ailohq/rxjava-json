@@ -1,7 +1,8 @@
-package com.trunk.rx.json;
+package com.trunk.rx.json.operator;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.impl.JsonParser;
 import com.trunk.rx.json.token.JsonToken;
 
@@ -25,7 +26,7 @@ public class OperatorJsonToken implements Operator<JsonTokenEvent, Character> {
    * valid JSON document as specified by <a
    * href="http://www.ietf.org/rfc/rfc4627.txt">RFC 4627</a>
    */
-  public static OperatorJsonToken strict() {
+  public OperatorJsonToken strict() {
     return new OperatorJsonToken(false);
   }
 
@@ -58,11 +59,15 @@ public class OperatorJsonToken implements Operator<JsonTokenEvent, Character> {
    *   <li>Name/value pairs separated by {@code ;} instead of {@code ,}.
    * </ul>
    */
-  public static OperatorJsonToken lenient() {
+  public OperatorJsonToken lenient() {
     return new OperatorJsonToken(true);
   }
 
-  private OperatorJsonToken(boolean lenient) {
+  public OperatorJsonToken() {
+    this(false);
+  }
+
+  public OperatorJsonToken(boolean lenient) {
     this.lenient = lenient;
   }
 

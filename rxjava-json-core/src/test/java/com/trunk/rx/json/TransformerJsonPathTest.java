@@ -2,6 +2,7 @@ package com.trunk.rx.json;
 
 import org.testng.annotations.Test;
 
+import com.trunk.rx.json.operator.OperatorJsonToken;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.path.NoopToken;
 import com.trunk.rx.json.path.RootToken;
@@ -9,6 +10,7 @@ import com.trunk.rx.json.token.JsonArray;
 import com.trunk.rx.json.token.JsonDocumentEnd;
 import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.token.JsonToken;
+import com.trunk.rx.json.transformer.TransformerJsonPath;
 import com.trunk.rx.string.StringObservable;
 
 import rx.Observable;
@@ -17,12 +19,16 @@ import rx.observers.TestSubscriber;
 import static org.testng.Assert.assertEquals;
 
 public class TransformerJsonPathTest {
+
+  public static final OperatorJsonToken STRICT_PARSER = new OperatorJsonToken();
+  public static final OperatorJsonToken LENIENT_PARSER = STRICT_PARSER.lenient();
+
   @Test
   public void shouldSkipAllWhenNoMatches() throws Exception {
     TestSubscriber<JsonPathEvent> ts = new TestSubscriber<>();
     Observable.just(OperatorJsonTokenTest.bigObject())
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$.zzz")))
       .subscribe(ts);
 
@@ -36,7 +42,7 @@ public class TransformerJsonPathTest {
     TestSubscriber<JsonPath> ts = new TestSubscriber<>();
     Observable.just(OperatorJsonTokenTest.bigObject())
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$")))
       .map(e -> e.getMatchedPathFragment())
       .distinctUntilChanged()
@@ -52,7 +58,7 @@ public class TransformerJsonPathTest {
     TestSubscriber<JsonToken> ts = new TestSubscriber<>();
     Observable.just(OperatorJsonTokenTest.bigObject())
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$")))
       .map(e -> e.getTokenEvent().getToken())
       .subscribe(ts);
@@ -63,7 +69,7 @@ public class TransformerJsonPathTest {
       ts.getOnNextEvents(),
       Observable.just(OperatorJsonTokenTest.bigObject())
         .lift(StringObservable.toCharacter())
-        .lift(OperatorJsonToken.strict())
+        .lift(STRICT_PARSER)
         .map(t -> t.getToken())
         .toList()
         .toBlocking()
@@ -76,7 +82,7 @@ public class TransformerJsonPathTest {
     TestSubscriber<JsonPath> ts = new TestSubscriber<>();
     Observable.just(OperatorJsonTokenTest.bigObject())
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$..*")))
       .map(e -> e.getMatchedPathFragment())
       .distinctUntilChanged()
@@ -92,7 +98,7 @@ public class TransformerJsonPathTest {
     TestSubscriber<JsonToken> ts = new TestSubscriber<>();
     Observable.just(OperatorJsonTokenTest.bigObject())
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$..*")))
       .map(e -> e.getTokenEvent().getToken())
       .subscribe(ts);
@@ -102,7 +108,7 @@ public class TransformerJsonPathTest {
     assertEquals(
       ts.getOnNextEvents(),
       StringObservable.from(OperatorJsonTokenTest.bigObject())
-        .lift(OperatorJsonToken.strict())
+        .lift(STRICT_PARSER)
         .map(t -> t.getToken())
         .toList()
         .toBlocking()
@@ -115,7 +121,7 @@ public class TransformerJsonPathTest {
     TestSubscriber<JsonPath> ts = new TestSubscriber<>();
     Observable.just("{\"a\":{\"b\":[1,2,3,4,5,6]}}")
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$.a.b")))
       .map(e -> e.getMatchedPathFragment())
       .distinctUntilChanged()
@@ -131,7 +137,7 @@ public class TransformerJsonPathTest {
     TestSubscriber<JsonPath> ts = new TestSubscriber<>();
     Observable.just("{\"a\":1234,\"b\":[1,2,3,4],\"c\":{\"w\":[5,6,7,8],\"x\":true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$.b[*]")))
       .map(e -> e.getMatchedPathFragment())
       .subscribe(ts);
@@ -146,7 +152,7 @@ public class TransformerJsonPathTest {
     TestSubscriber<JsonPath> ts = new TestSubscriber<>();
     Observable.just("{\"a\":1234,\"b\":[1,2,3,4],\"c\":{\"w\":[5,6,7,8],\"x\":true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$.b[*]")))
       .map(e -> e.getMatchedPathFragment())
       .take(1)
@@ -163,7 +169,7 @@ public class TransformerJsonPathTest {
     Observable.just("{\"a\":1234,\"b\":[1,2,3,4],\"c\":{\"w\":[5,6,7,8],\"x\":true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
       .lift(StringObservable.toCharacter())
       .doOnNext(c -> buf.append(c))
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$.b[*]")))
       .map(e -> e.getMatchedPathFragment())
       .subscribe();
@@ -178,7 +184,7 @@ public class TransformerJsonPathTest {
     Observable.just(value)
       .lift(StringObservable.toCharacter())
       .doOnNext(c -> buf.append(c))
-      .lift(OperatorJsonToken.strict())
+      .lift(STRICT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$.b[*]")).lenient())
       .map(e -> e.getMatchedPathFragment())
       .subscribe();
@@ -192,7 +198,7 @@ public class TransformerJsonPathTest {
     String value = "{}{}";
     Observable.just(value)
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.lenient())
+      .lift(LENIENT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$..*")))
       .map(e -> e.getMatchedPathFragment())
       .subscribe(ts);
@@ -208,7 +214,7 @@ public class TransformerJsonPathTest {
     String value = "{\"a\":{\"b\":[1,2,3,4,5,6]}} {\"a\":{\"b\":[1,2,3,4,5,6]}} {\"a\":{\"b\":[1,2,3,4,5,6]}}";
     Observable.just(value)
       .lift(StringObservable.toCharacter())
-      .lift(OperatorJsonToken.lenient())
+      .lift(LENIENT_PARSER)
       .compose(TransformerJsonPath.from(JsonPath.parse("$.a.b[1]")).lenient())
       .map(e -> e.getMatchedPathFragment())
       .subscribe(ts);

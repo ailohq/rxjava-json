@@ -1,10 +1,12 @@
-package com.trunk.rx.json;
+package com.trunk.rx.json.transformer;
 
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.trunk.rx.json.JsonPathEvent;
+import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.path.NoopToken;
 import com.trunk.rx.json.token.JsonDocumentEnd;
@@ -30,7 +32,7 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
     return new TransformerJsonPath(Observable.from(matchers), false);
   }
 
-  private TransformerJsonPath(Observable<JsonPath> matchers, boolean lenient) {
+  public TransformerJsonPath(Observable<JsonPath> matchers, boolean lenient) {
     this.lenient = lenient;
     this.matchers = matchers;
     matchers.toBlocking().forEach(jsonPath -> {
@@ -53,6 +55,10 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
                 Observable.empty()
             )
       );
+  }
+
+  public TransformerJsonPath strict() {
+    return new TransformerJsonPath(matchers, false);
   }
 
   private boolean allMatchersComplete() {

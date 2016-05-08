@@ -2,6 +2,8 @@ package com.trunk.rx.string;
 
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.trunk.rx.string.operator.OperatorStringToChar;
+
 import rx.Observable;
 import rx.Producer;
 import rx.Subscriber;
