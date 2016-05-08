@@ -1,5 +1,6 @@
 package com.trunk.rx.json.transformer;
 
+import com.trunk.rx.json.JsonObjectEvent;
 import com.trunk.rx.json.JsonPathEvent;
 import com.trunk.rx.json.operator.OperatorJsonToken;
 import com.trunk.rx.json.path.JsonPath;
@@ -26,6 +27,10 @@ public class TransformerRxJson implements Observable.Transformer<String, JsonPat
 
   public TransformerRxJson strict() {
     return new TransformerRxJson(operatorJsonToken.strict(), transformerJsonPath.strict());
+  }
+
+  public Observable.Transformer<String, JsonObjectEvent> collectObjects() {
+    return new TransformerCollectObjects(this);
   }
 
   @Override
