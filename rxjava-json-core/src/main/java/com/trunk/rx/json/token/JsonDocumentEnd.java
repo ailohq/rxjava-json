@@ -1,7 +1,5 @@
 package com.trunk.rx.json.token;
 
-import java.util.Objects;
-
 public class JsonDocumentEnd implements JsonToken {
 
   public static final JsonDocumentEnd INSTANCE = new JsonDocumentEnd();

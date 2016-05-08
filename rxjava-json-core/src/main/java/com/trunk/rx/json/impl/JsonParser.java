@@ -3,6 +3,10 @@ package com.trunk.rx.json.impl;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,7 +28,9 @@ import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.token.JsonString;
 import com.trunk.rx.json.token.JsonToken;
 
+import rx.Producer;
 import rx.Subscriber;
+import rx.functions.Action0;
 
 public class JsonParser extends Subscriber<Character> {
   private static final Logger log = LoggerFactory.getLogger(JsonParser.class);
@@ -32,7 +38,6 @@ public class JsonParser extends Subscriber<Character> {
   private static final char[] NON_EXECUTE_PREFIX = ")]}'\n".toCharArray();
   private static final char BOM = '\uFEFF';
 
-  private final Subscriber<? super JsonTokenEvent> downstream;
   private final boolean lenient;
 
   // is this the first character of the stream
@@ -75,6 +80,12 @@ public class JsonParser extends Subscriber<Character> {
 
   private boolean emitted = false;
 
+  private AtomicBoolean started = new AtomicBoolean(false);
+  private AtomicBoolean completed = new AtomicBoolean(false);
+  private Queue<JsonTokenEvent> tokenBuffer = new ConcurrentLinkedDeque<>();
+  private Action0 reenterProducer = () -> {};
+  private AtomicReference<Throwable> error = new AtomicReference<>();
+
   {
     stack[stackSize++] = JsonScope.EMPTY_DOCUMENT;
   }
@@ -89,64 +100,108 @@ public class JsonParser extends Subscriber<Character> {
    */
   private JsonPath[] paths = new JsonPath[32];
 
-  public JsonParser(Subscriber<? super JsonTokenEvent> downstream, boolean lenient) {
-    super(downstream, false);
-    this.downstream = downstream;
+  public JsonParser(boolean lenient) {
     this.lenient = lenient;
+    request(0);
   }
+
+  public boolean completed() {
+    return completed.get();
+  }
+
+  public boolean started() {
+    return started.get();
+  }
+
+  public boolean isEmpty() {
+    return tokenBuffer.isEmpty();
+  }
+
+  public JsonTokenEvent poll() {
+    return tokenBuffer.poll();
+  }
+
+  public void requestMore() {
+    request(1);
+  }
+
+  public void reenterProducer(Action0 f) {
+    reenterProducer = f;
+  }
+
+  public Throwable error() {
+    return error.get();
+  }
+
+  @Override
+  public void setProducer(Producer p) {
+    super.setProducer(p);
+    started.set(true);
+    reenterProducer.call();
+  }
+
   @Override
   public void onCompleted() {
-    if (!downstream.isUnsubscribed()) {
       if (maybeStartComment) {
-        downstream.onError(syntaxError("Unexpected trailing slash"));
+        completeWithError(syntaxError("Unexpected trailing slash"));
         return;
       }
       if ((currentScope() == JsonScope.BARE_VALUE || currentScope() == JsonScope.NUMBER) &&
           (bufferOverflow.length() > 0 || bufferOffset > 0)) {
         Optional<JsonToken> token = getCurrentValueAndResetBuffer();
         token.ifPresent(t -> {
-          emitDownstream(t);
           popScope();
+          emitDownstream(t);
+          maybeEmitDocumentEnd();
         });
         if (!token.isPresent()) {
-          downstream.onError(syntaxError("Invalid bare token"));
-          downstream.unsubscribe();
+          completeWithError(syntaxError("Invalid bare token"));
           return;
         }
       }
-      if (currentScope() == JsonScope.NONEMPTY_DOCUMENT) {
-        maybeEmitDocumentEnd();
-        downstream.onCompleted();
+      if (
+        currentScope() == JsonScope.NONEMPTY_DOCUMENT ||
+        (currentScope() == JsonScope.EMPTY_DOCUMENT && lenient)
+      ) {
+        complete();
       } else if (currentScope() == JsonScope.EMPTY_DOCUMENT) {
-        if (lenient) {
-          downstream.onCompleted();
-        } else {
-          downstream.onError(syntaxError("Empty JSON"));
-        }
+        completeWithError(syntaxError("Empty JSON"));
       } else {
-        downstream.onError(syntaxError("Expected " + getExpected()));
+        completeWithError(syntaxError("Expected " + getExpected()));
       }
-      downstream.unsubscribe();
     }
+
+  private void complete() {
+    trace(" - complete");
+    completed.set(true);
+    reenterProducer.call();
+  }
+
+  private void completeWithError(Throwable t) {
+    trace(" - error: {}", t.getMessage());
+    error.set(t);
+    complete();
   }
 
   @Override
-  public void onError(Throwable e) {
-    if (!downstream.isUnsubscribed()) {
-      downstream.onError(e);
-    }
+  public void onError(Throwable t) {
+    completeWithError(t);
   }
 
   @Override
   public void onNext(Character c) {
     try {
-      log.info("{}", c);
+      trace("{}", c);
 
       emitted = false;
 
-      if (!downstream.isUnsubscribed() && captureComment(c)) {
-        request(1);
-      } else {
+      started.set(true);
+
+      if (completed()) {
+        return;
+      }
+
+      if(!captureComment(c)) {
         doOnNext(c);
       }
 
@@ -160,42 +215,39 @@ public class JsonParser extends Subscriber<Character> {
       firstChar = false;
 
       if (!emitted) {
-        request(1);
+        requestMore();
       }
 
+      reenterProducer.call();
     } catch (Throwable t) {
       log.warn("Unexpected error", t);
-      downstream.onError(t);
+      completeWithError(t);
     }
   }
 
   private void doOnNext(char c) {
-    if (!downstream.isUnsubscribed()) {
-      log.info(" -{}\t{}", currentStack(), getPath());
-      JsonScope scope = currentScope();
-      if (scope == JsonScope.EMPTY_DOCUMENT) {
-        handleEmptyDocument(c);
-      } else if (scope == JsonScope.NONEMPTY_DOCUMENT) {
-        handleNonEmptyDocument(c);
-      } else if (scope == JsonScope.EMPTY_ARRAY) {
-        handleEmptyArray(c);
-      } else if (scope == JsonScope.NONEMPTY_ARRAY) {
-        handleNonEmptyArray(c);
-      } else if (scope == JsonScope.EMPTY_OBJECT) {
-        handleEmptyObject(c);
-      } else if (scope == JsonScope.NONEMPTY_OBJECT) {
-        handleNonEmptyObject(c);
-      } else if (scope == JsonScope.DANGLING_NAME) {
-        handleName(c);
-      } else if (scope == JsonScope.BARE_VALUE) {
-        handleBareValue(c);
-      } else if (scope == JsonScope.NUMBER) {
-        handleNumber(c);
-      } else if (scope == JsonScope.QUOTED_STRING) {
-        handleString(c);
-      } else {
-        request(1);
-      }
+    trace(" - {}\t{}", currentStack(), getPath());
+    JsonScope scope = currentScope();
+    if (scope == JsonScope.EMPTY_DOCUMENT) {
+      handleEmptyDocument(c);
+    } else if (scope == JsonScope.NONEMPTY_DOCUMENT) {
+      handleNonEmptyDocument(c);
+    } else if (scope == JsonScope.EMPTY_ARRAY) {
+      handleEmptyArray(c);
+    } else if (scope == JsonScope.NONEMPTY_ARRAY) {
+      handleNonEmptyArray(c);
+    } else if (scope == JsonScope.EMPTY_OBJECT) {
+      handleEmptyObject(c);
+    } else if (scope == JsonScope.NONEMPTY_OBJECT) {
+      handleNonEmptyObject(c);
+    } else if (scope == JsonScope.DANGLING_NAME) {
+      handleName(c);
+    } else if (scope == JsonScope.BARE_VALUE) {
+      handleBareValue(c);
+    } else if (scope == JsonScope.NUMBER) {
+      handleNumber(c);
+    } else if (scope == JsonScope.QUOTED_STRING) {
+      handleString(c);
     }
   }
 
@@ -204,23 +256,21 @@ public class JsonParser extends Subscriber<Character> {
       skipWhitespace();
     } else if (hasSeparator && lenient && c == '>') {
       hasSeparator = true;
-      request(1);
     } else if (hasSeparator) {
       if (c == '[') {
         startArray(JsonScope.NONEMPTY_OBJECT);
       } else if (c == '{') {
         startObject(JsonScope.NONEMPTY_OBJECT);
       } else if (c == '}' || c == ']' || c == ':' || c == '=' || c == ',' || c == ';') {
-        downstream.onError(syntaxError("Expected value"));
+        completeWithError(syntaxError("Expected value"));
       } else {
         startSimpleValue(c, JsonScope.NONEMPTY_OBJECT);
       }
       hasSeparator = false;
     } else if (c == ':' || (lenient && c == '=')) {
-      request(1);
       hasSeparator = true;
     } else {
-      downstream.onError(syntaxError("Expected object separator"));
+      completeWithError(syntaxError("Expected object separator"));
     }
   }
 
@@ -229,7 +279,7 @@ public class JsonParser extends Subscriber<Character> {
       skipWhitespace();
     } else if (hasSeparator) {
       if (c != '"' && c != '\'' && isControlCharacter(c)) {
-        downstream.onError(syntaxError("Expected name"));
+        completeWithError(syntaxError("Expected name"));
       } else {
         startName(c);
         hasSeparator = false;
@@ -237,11 +287,11 @@ public class JsonParser extends Subscriber<Character> {
     } else if (c == '}') {
       popScope(); // order effects jsonPath
       emitDownstream(JsonObject.end());
+      maybeEmitDocumentEnd();
     } else if (c == ',' || (lenient && c == ';')) {
       hasSeparator = true;
-      request(1);
     } else {
-      downstream.onError(syntaxError("Expected list separator"));
+      completeWithError(syntaxError("Expected list separator"));
     }
   }
 
@@ -249,10 +299,11 @@ public class JsonParser extends Subscriber<Character> {
     if (isWhitespace(c)) {
       skipWhitespace();
     } else if (c == '}') {
-      emitDownstream(JsonObject.end());
       popScope();
+      emitDownstream(JsonObject.end());
+      maybeEmitDocumentEnd();
     } else if (c == '{' || c == '[' || c == ']' || c == ':' || c == '=' || c == ',' || c == ';') {
-      downstream.onError(syntaxError("Expected name"));
+      completeWithError(syntaxError("Expected name"));
     } else {
       startName(c);
     }
@@ -269,18 +320,18 @@ public class JsonParser extends Subscriber<Character> {
       if (lenient && (c == ',' || c == ';')) {
         incrementPathIndex();
         emitDownstream(JsonNull.INSTANCE);
-        request(1);
       } else if (lenient && c == ']') {
+        hasSeparator = false;
         popScope();
         emitDownstream(JsonNull.INSTANCE);
         emitDownstream(JsonArray.end());
-        request(1);
+        maybeEmitDocumentEnd();
       } else if (c == '[') {
         startArray(JsonScope.NONEMPTY_ARRAY);
       } else if (c == '{') {
         startObject(JsonScope.NONEMPTY_ARRAY);
       } else if (c == '}' || c == ':' || c == '=' || c == ',' || c == ';') {
-        downstream.onError(syntaxError("Expected value"));
+        completeWithError(syntaxError("Expected value"));
       } else {
         hasSeparator = false;
         startSimpleValue(c, JsonScope.NONEMPTY_ARRAY);
@@ -288,13 +339,12 @@ public class JsonParser extends Subscriber<Character> {
     } else if (c == ']') {
       popScope(); // order effects jsonPath
       emitDownstream(JsonArray.end());
-      request(1);
+      maybeEmitDocumentEnd();
     } else if (c == ',' || (lenient && c == ';')) {
       hasSeparator = true;
       incrementPathIndex();
-      request(1);
     } else {
-      downstream.onError(syntaxError("Expected list separator"));
+      completeWithError(syntaxError("Expected list separator"));
     }
   }
 
@@ -302,7 +352,7 @@ public class JsonParser extends Subscriber<Character> {
     if (c == ']') {
       popScope();
       emitDownstream(JsonArray.end());
-      request(1);
+      maybeEmitDocumentEnd();
     } else if (isWhitespace(c)) {
       skipWhitespace();
     } else if (c == '[') {
@@ -314,9 +364,8 @@ public class JsonParser extends Subscriber<Character> {
       hasSeparator = true;
       incrementPathIndex();
       emitDownstream(JsonNull.INSTANCE);
-      request(1);
     } else if (c == '}' || c == ':' || c == '=' || c == ',' || c == ';') {
-      downstream.onError(syntaxError("Expected value"));
+      completeWithError(syntaxError("Expected value"));
     } else {
       startSimpleValue(c, JsonScope.NONEMPTY_ARRAY);
     }
@@ -325,11 +374,10 @@ public class JsonParser extends Subscriber<Character> {
   private void handleNumber(char c) {
     Optional<NumberState> transition = getNumberTransition(c);
     if (isWhitespace(c) || isControlCharacter(c)) {
-      emitTokenOrError(c);
+      emitBareValueOrError(c);
     } else if (transition.isPresent()) {
       transition.ifPresent(newState -> numberState = newState);
       appendBuffer(c);
-      request(1);
     } else {
       setScope(JsonScope.BARE_VALUE);
       handleBareValue(c);
@@ -363,7 +411,6 @@ public class JsonParser extends Subscriber<Character> {
         appendBuffer(c);
       }
       inStringEscape = false;
-      request(1);
     } else if (inUnicodeEscape) {
       if (unicodeEscapeBufferOffset < unicodeEscapeBuffer.length && isHex(c)) {
         unicodeEscapeBuffer[unicodeEscapeBufferOffset] = c;
@@ -372,27 +419,24 @@ public class JsonParser extends Subscriber<Character> {
           appendBuffer(getEscapedUnicode(unicodeEscapeBuffer));
           inUnicodeEscape = false;
         }
-        request(1);
       } else {
-        downstream.onError(syntaxError("Invalid unicode escape sequence"));
+        completeWithError(syntaxError("Invalid unicode escape sequence"));
       }
     } else if (c == '\\') {
       inStringEscape = true;
-      request(1);
     } else if (c == stringDelimiter) {
       Optional<JsonToken> token = getCurrentValueAndResetBuffer();
       if (token.isPresent()) {
         token.ifPresent(t -> {
-          emitDownstream(t);
           popScope();
+          emitDownstream(t);
+          maybeEmitDocumentEnd();
         });
       } else {
-        downstream.onError(syntaxError("Invalid value"));
+        completeWithError(syntaxError("Invalid value"));
       }
-      request(1);
     } else {
       appendBuffer(c);
-      request(1);
     }
   }
 
@@ -413,10 +457,9 @@ public class JsonParser extends Subscriber<Character> {
 
   private void handleBareValue(char c) {
     if (isWhitespace(c) || isControlCharacter(c)) {
-      emitTokenOrError(c);
+      emitBareValueOrError(c);
     } else {
       appendBuffer(c);
-      request(1);
     }
   }
 
@@ -426,54 +469,53 @@ public class JsonParser extends Subscriber<Character> {
     } else if (lenient) {
       handleEmptyDocument(c);
     } else {
-      downstream.onError(syntaxError("Unexpected data after document completed"));
+      completeWithError(syntaxError("Unexpected data after document completed"));
     }
   }
 
   private void handleEmptyDocument(char c) {
     if (firstChar && c == BOM) {
-      request(1);
       --columnNumber;
     } else if (lenient && c == '\n' && isNonExecutePrefix(c)) {
       resetBuffer();
-      request(1);
     } else if (lenient && isNonExecutePrefix(c)) {
       appendBuffer(c);
-      request(1);
     } else if (isWhitespace(c)) {
       skipWhitespace();
     } else if (c == '{') {
-      maybeEmitDocumentEnd();
       startObject(JsonScope.NONEMPTY_DOCUMENT);
     } else if (c == '[') {
-      maybeEmitDocumentEnd();
       startArray(JsonScope.NONEMPTY_DOCUMENT);
     } else {
-      maybeEmitDocumentEnd();
       startSimpleValue(c, JsonScope.NONEMPTY_DOCUMENT);
     }
   }
 
   private void maybeEmitDocumentEnd() {
     if (currentScope() == JsonScope.NONEMPTY_DOCUMENT) {
-      downstream.onNext(new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE));
+      emitDownstream(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE);
+      if (lenient) {
+        setScope(JsonScope.EMPTY_DOCUMENT);
+      }
     }
   }
 
-  private void emitTokenOrError(char c) {Optional<JsonToken> token = getCurrentValueAndResetBuffer();
+  private void emitBareValueOrError(char c) {
+    Optional<JsonToken> token = getCurrentValueAndResetBuffer();
     if (token.isPresent()) {
       token.ifPresent(t -> {
         emitDownstream(t);
         popScope();
       });
+      maybeEmitDocumentEnd();
       doOnNext(c);
     } else {
-      downstream.onError(syntaxError("Invalid value"));
+      completeWithError(syntaxError("Invalid value"));
     }
   }
 
   private void skipWhitespace() {
-    request(1);
+    // do nothing
   }
 
   private void startObject(JsonScope nonEmptyScope) {
@@ -512,7 +554,6 @@ public class JsonParser extends Subscriber<Character> {
     }
     setScope(nonEmptyScope);
     pushScope(JsonScope.NUMBER);
-    request(1);
   }
 
   private boolean captureComment(char c) {
@@ -565,17 +606,15 @@ public class JsonParser extends Subscriber<Character> {
     stringDelimiter = c;
     setScope(nonEmptyScope);
     pushScope(JsonScope.QUOTED_STRING);
-    request(1);
   }
 
   private void startBareValue(char c, JsonScope nonEmptyScope) {
     if (isControlCharacter(c) && c != '/' && c != '#') {
-      downstream.onError(syntaxError("Invalid value"));
+      completeWithError(syntaxError("Invalid value"));
     } else {
       setScope(nonEmptyScope);
       pushScope(JsonScope.BARE_VALUE);
       appendBuffer(c);
-      request(1);
     }
   }
 
@@ -799,8 +838,18 @@ public class JsonParser extends Subscriber<Character> {
   }
 
   private void emitDownstream(JsonToken token) {
+    emitDownstream(token, getPath());
+  }
+
+  private void emitDownstream(JsonToken token, JsonPath path) {
     emitted = true;
-    downstream.onNext(new JsonTokenEvent(token, getPath()));
+    trace(" - emitted {} at {}", token, path);
+    tokenBuffer.add(new JsonTokenEvent(token, path));
+    reenterProducer.call();
+  }
+
+  private void trace(String message, Object... arguments) {
+    log.trace(message, arguments);
   }
 
   /**

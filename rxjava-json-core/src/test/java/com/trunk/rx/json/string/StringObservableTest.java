@@ -92,6 +92,19 @@ public class StringObservableTest {
   }
 
   @Test
+  public void operatorShouldPropogateErrors() throws Exception {
+    TestSubscriber<Character> t = new TestSubscriber<>();
+    RuntimeException exception = new RuntimeException();
+    Observable.just("this is ")
+      .concatWith(Observable.error(exception))
+      .concatWith(Observable.just("a string"))
+      .lift(StringObservable.toCharacter())
+      .subscribe(t);
+    t.assertError(exception);
+    t.assertValues('t', 'h', 'i', 's', ' ', 'i', 's', ' ');
+  }
+
+  @Test
   public void operatorShouldStopEmittingOnUnsubscribe() throws Exception {
     List<Character> cs = new ArrayList<>();
     TestSubscriber<Character> t = new TestSubscriber<>();

@@ -1,5 +1,6 @@
 package com.trunk.rx.json;
 
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Optional;
@@ -11,21 +12,35 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.trunk.rx.string.StringObservable;
 import com.trunk.rx.json.exception.MalformedJsonException;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.path.NoopToken;
-import com.trunk.rx.json.token.*;
+import com.trunk.rx.json.token.JsonArray;
+import com.trunk.rx.json.token.JsonArrayEnd;
+import com.trunk.rx.json.token.JsonArrayStart;
+import com.trunk.rx.json.token.JsonBoolean;
+import com.trunk.rx.json.token.JsonDocumentEnd;
+import com.trunk.rx.json.token.JsonName;
+import com.trunk.rx.json.token.JsonNull;
+import com.trunk.rx.json.token.JsonNumber;
+import com.trunk.rx.json.token.JsonObject;
+import com.trunk.rx.json.token.JsonObjectStart;
+import com.trunk.rx.json.token.JsonString;
+import com.trunk.rx.json.token.JsonToken;
+import com.trunk.rx.string.StringObservable;
 
 import rx.Observable;
+import rx.Subscriber;
+import rx.Subscription;
 import rx.observers.TestSubscriber;
+import rx.schedulers.Schedulers;
 
 import static org.testng.Assert.assertEquals;
 
-public class JsonTokenOperatorTest {
+public class OperatorJsonTokenTest {
 
-  private static final JsonTokenOperator BASE_PARSER = JsonTokenOperator.strict();
-  public static final JsonTokenOperator LENIENT_PARSER = JsonTokenOperator.lenient();
+  private static final OperatorJsonToken BASE_PARSER = OperatorJsonToken.strict();
+  private static final OperatorJsonToken LENIENT_PARSER = OperatorJsonToken.lenient();
 
   @Test
   public void shouldReturnNoTokensForEmptyUpstream() throws Exception {
@@ -1196,7 +1211,7 @@ public class JsonTokenOperatorTest {
     should("reject multiple top level values")
       .given(BASE_PARSER)
       .when("[][]")
-      .then(JsonArray.start(), JsonArray.end())
+      .then(JsonArray.start(), JsonArray.end(), JsonDocumentEnd.INSTANCE)
       .then(MalformedJsonException.class)
       .run();
   }
@@ -1205,8 +1220,16 @@ public class JsonTokenOperatorTest {
   public void shouldAllowMultipleTopLevelValuesWhenLenient() throws Exception {
     should("allow multiple top level values when lenient")
       .given(LENIENT_PARSER)
-      .when("[] true {}")
+      .when("[] true {}[]true{}")
       .then(
+        JsonArray.start(),
+        JsonArray.end(),
+        JsonDocumentEnd.INSTANCE,
+        JsonBoolean.True(),
+        JsonDocumentEnd.INSTANCE,
+        JsonObject.start(),
+        JsonObject.end(),
+        JsonDocumentEnd.INSTANCE,
         JsonArray.start(),
         JsonArray.end(),
         JsonDocumentEnd.INSTANCE,
@@ -1636,19 +1659,556 @@ public class JsonTokenOperatorTest {
 
   @Test
   public void shouldSendBackPressureUpstream() throws Exception {
-    TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
+    TestSubscriber<JsonToken> ts = new TestSubscriber<>();
     ts.requestMore(0);
-    int[] emitted = {0};
-    StringObservable.from(" true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],\"x\":true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
-      .doOnNext(c -> emitted[0] += 1)
+    StringBuilder emitted = new StringBuilder();
+    StringObservable.from(" true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
+      .doOnNext(c -> emitted.append(c))
       .lift(LENIENT_PARSER)
+      .map(e -> e.getToken())
       .subscribe(ts);
 
     ts.assertNoValues();
 
     ts.requestMore(1);
-    assertEquals(ts.getOnNextEvents().size(), 1);
-    assertEquals(emitted[0], 5);
+    ts.assertNoErrors();
+    ts.assertValues(JsonBoolean.True());
+    assertEquals(emitted.toString(), " true ");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(JsonBoolean.True(), JsonDocumentEnd.INSTANCE);
+    assertEquals(emitted.toString(), " true ");
+
+    ts.requestMore(2);
+    ts.assertNoErrors();
+    ts.assertValues(JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"));
+    assertEquals(emitted.toString(), " true {\"a\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"));
+    assertEquals(emitted.toString(), " true {\"a\":1234,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"));
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null}");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null}");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start(), JsonObject.start()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start(), JsonObject.start(), JsonName.of("1")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start(), JsonObject.start(), JsonName.of("1"), JsonString.of("1")
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start(), JsonObject.start(), JsonName.of("1"), JsonString.of("1"),
+      JsonObject.end()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start(), JsonObject.start(), JsonName.of("1"), JsonString.of("1"),
+      JsonObject.end(), JsonArray.end()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start(), JsonObject.start(), JsonName.of("1"), JsonString.of("1"),
+      JsonObject.end(), JsonArray.end(), JsonObject.end()
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonName.of("a"), JsonNumber.of("1234"), JsonName.of("b"),
+      JsonArray.start(), JsonNumber.of("1"), JsonNumber.of("2"), JsonNumber.of("3"), JsonNull.INSTANCE, JsonArray.end(),
+      JsonName.of("c"), JsonObject.start(), JsonName.of("w"), JsonArray.start(), JsonNull.INSTANCE, JsonNull.INSTANCE,
+      JsonNumber.of("7"), JsonArray.start(), JsonNumber.of("8"), JsonArray.end(), JsonArray.end(), JsonName.of("x"),
+      JsonBoolean.True(), JsonName.of("y"), JsonBoolean.False(), JsonName.of("z"), JsonNull.INSTANCE,
+      JsonObject.end(), JsonName.of("d"), JsonArray.start(), JsonObject.start(), JsonName.of("1"), JsonString.of("1"),
+      JsonObject.end(), JsonArray.end(), JsonObject.end(), JsonDocumentEnd.INSTANCE
+    );
+    assertEquals(emitted.toString(), " true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}");
+
+    ts.assertCompleted();
+  }
+
+  @Test
+  public void shouldNotAutomaticallyConsumeJunkWhitespace() throws Exception {
+    TestSubscriber<JsonToken> ts = new TestSubscriber<>();
+    ts.requestMore(0);
+    StringBuilder emitted = new StringBuilder();
+    StringObservable.from("  true  {  }  [  \"a\"  ,  b  ]  ")
+      .doOnNext(c -> emitted.append(c))
+      .lift(LENIENT_PARSER)
+      .map(e -> e.getToken())
+      .subscribe(ts);
+
+    ts.assertNoValues();
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(JsonBoolean.True());
+    assertEquals(emitted.toString(), "  true ");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(JsonBoolean.True(), JsonDocumentEnd.INSTANCE);
+    assertEquals(emitted.toString(), "  true ");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE,
+      JsonObject.start()
+    );
+    assertEquals(emitted.toString(), "  true  {");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE,
+      JsonObject.start(), JsonObject.end()
+    );
+    assertEquals(emitted.toString(), "  true  {  }");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE,
+      JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE
+    );
+    assertEquals(emitted.toString(), "  true  {  }");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE,
+      JsonArray.start()
+    );
+    assertEquals(emitted.toString(), "  true  {  }  [");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE,
+      JsonArray.start(), JsonString.of("a")
+    );
+    assertEquals(emitted.toString(), "  true  {  }  [  \"a\"");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE,
+      JsonArray.start(), JsonString.of("a"), JsonString.of("b")
+    );
+    assertEquals(emitted.toString(), "  true  {  }  [  \"a\"  ,  b ");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE,
+      JsonArray.start(), JsonString.of("a"), JsonString.of("b"), JsonArray.end()
+    );
+    assertEquals(emitted.toString(), "  true  {  }  [  \"a\"  ,  b  ]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE,
+      JsonArray.start(), JsonString.of("a"), JsonString.of("b"), JsonArray.end(), JsonDocumentEnd.INSTANCE
+    );
+    assertEquals(emitted.toString(), "  true  {  }  [  \"a\"  ,  b  ]");
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertCompleted();
+    ts.assertValues(
+      JsonBoolean.True(), JsonDocumentEnd.INSTANCE, JsonObject.start(), JsonObject.end(), JsonDocumentEnd.INSTANCE,
+      JsonArray.start(), JsonString.of("a"), JsonString.of("b"), JsonArray.end(), JsonDocumentEnd.INSTANCE
+    );
+    assertEquals(emitted.toString(), "  true  {  }  [  \"a\"  ,  b  ]  ");
+  }
+
+  @Test(enabled = false, description = "minimal threading/reentry smoke test")
+  public void shouldParseVeryLongStreams() throws Exception {
+    long[] chars = {0};
+    long[] tokens = {0};
+    int range = 100_000_000;
+    Subscription s =
+      Observable.range(0, range)
+        .doOnNext(i -> {
+          if (i % 100_000 == 0) {System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));}
+        })
+        .concatMap(i -> StringObservable.from(" { } "))
+        .doOnNext(c -> chars[0] += 1)
+        .lift(LENIENT_PARSER)
+        .doOnNext(t -> tokens[0] += 1)
+        .subscribe();
+
+    assertEquals(chars[0], range * 5L);
+    assertEquals(tokens[0], range * 3L);
+  }
+
+  @Test(enabled = false, description = "minimal threading/reentry smoke test")
+  public void shouldParseVeryLongStreamsOnTrampoline() throws Exception {
+    long[] chars = {0};
+    long[] tokens = {0};
+    int range = 10_000_000;
+    TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
+    Observable.range(0, range, Schedulers.trampoline())
+      .doOnNext(i -> {
+        if (i % 100_000 == 0) {System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));}
+      })
+      .concatMap(i -> StringObservable.from(" { } "))
+      .doOnNext(c -> chars[0] += 1)
+      .lift(LENIENT_PARSER)
+      .doOnNext(t -> tokens[0] += 1)
+      .subscribe(ts);
+
+    ts.awaitTerminalEvent();
+
+    assertEquals(chars[0], range * 5L);
+    assertEquals(tokens[0], range * 3L);
+  }
+
+  @Test(enabled = false, description = "minimal threading/reentry smoke test")
+  public void shouldParseVeryLongStreamsAcrossTreads() throws Exception {
+    long[] chars = {0};
+    long[] tokens = {0};
+    int range = 10_000_000;
+    TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
+    Observable.range(0, range, Schedulers.trampoline())
+      .doOnNext(i -> {
+        if (i % 100_000 == 0) {System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));}
+      })
+      .concatMap(i -> StringObservable.from(" { } "))
+      .doOnNext(c -> chars[0] += 1)
+      .lift(LENIENT_PARSER)
+      .doOnNext(t -> tokens[0] += 1)
+      .subscribeOn(Schedulers.io())
+      .subscribe(ts);
+
+    ts.awaitTerminalEvent();
+
+    assertEquals(chars[0], range * 5L);
+    assertEquals(tokens[0], range * 3L);
   }
 
   private JsonToken[] bigObjectTokens() {
@@ -1722,7 +2282,7 @@ public class JsonTokenOperatorTest {
     );
   }
 
-  public static TestItem given(JsonTokenOperator jsonTokenOperator) {
+  public static TestItem given(OperatorJsonToken operatorJsonToken) {
     return new TestItem(
       EMPTY_ARRAY,
       Optional.empty(),
@@ -1731,7 +2291,7 @@ public class JsonTokenOperatorTest {
       Optional.empty(),
       Optional.empty(),
       "",
-      jsonTokenOperator
+      operatorJsonToken
     );
   }
 
@@ -1748,7 +2308,7 @@ public class JsonTokenOperatorTest {
     private final Optional<Class> error;
     private final Optional<String> message;
     private final Optional<Is> completed;
-    private final JsonTokenOperator jsonTokenOperator;
+    private final OperatorJsonToken operatorJsonToken;
     private final String description;
 
     private TestItem(String[] jsonFragments,
@@ -1759,7 +2319,7 @@ public class JsonTokenOperatorTest {
                      Optional<Is> completed,
                      String description,
 
-                     JsonTokenOperator jsonTokenOperator) {
+                     OperatorJsonToken operatorJsonToken) {
       this.jsonFragments = jsonFragments;
       this.expectedTokens = expectedTokens;
       this.expectedTokenTypes = expectedTokenTypes;
@@ -1767,35 +2327,35 @@ public class JsonTokenOperatorTest {
       this.message = message;
       this.completed = completed;
       this.description = description;
-      this.jsonTokenOperator = jsonTokenOperator;
+      this.operatorJsonToken = operatorJsonToken;
     }
 
-    public TestItem given(JsonTokenOperator jsonTokenOperator) {
-      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, message, completed, description, jsonTokenOperator);
+    public TestItem given(OperatorJsonToken operatorJsonToken) {
+      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, message, completed, description, operatorJsonToken);
     }
 
     public TestItem when(String... jsonFragments) {
-      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, message, completed, description, jsonTokenOperator);
+      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, message, completed, description, operatorJsonToken);
     }
 
     public TestItem then(JsonToken... expectedTokens) {
-      return new TestItem(jsonFragments, Optional.of(expectedTokens), expectedTokenTypes, error, message, completed, description, jsonTokenOperator);
+      return new TestItem(jsonFragments, Optional.of(expectedTokens), expectedTokenTypes, error, message, completed, description, operatorJsonToken);
     }
 
     public TestItem thenType(Class... expectedTokenTypes) {
-      return new TestItem(jsonFragments, expectedTokens, Optional.of(expectedTokenTypes), error, message, completed, description, jsonTokenOperator);
+      return new TestItem(jsonFragments, expectedTokens, Optional.of(expectedTokenTypes), error, message, completed, description, operatorJsonToken);
     }
 
     public TestItem then(Class<? extends Throwable> error) {
-      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, Optional.of(error), message, completed, description, jsonTokenOperator);
+      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, Optional.of(error), message, completed, description, operatorJsonToken);
     }
 
     public TestItem then(Is completed) {
-      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, message, Optional.of(completed), description, jsonTokenOperator);
+      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, message, Optional.of(completed), description, operatorJsonToken);
     }
 
     public TestItem then(String message) {
-      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, Optional.of(message), completed, description, jsonTokenOperator);
+      return new TestItem(jsonFragments, expectedTokens, expectedTokenTypes, error, Optional.of(message), completed, description, operatorJsonToken);
     }
 
     public void run() {
@@ -1803,7 +2363,7 @@ public class JsonTokenOperatorTest {
         TestSubscriber<JsonToken> ts = new TestSubscriber<>();
         Observable.from(jsonFragments)
           .lift(StringObservable.toCharacter())
-          .lift(jsonTokenOperator)
+          .lift(operatorJsonToken)
           .map(e -> e.getToken())
           .subscribe(ts);
 

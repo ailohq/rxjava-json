@@ -16,11 +16,11 @@
 
 package com.trunk.rx.json.exception;
 
-import com.trunk.rx.json.JsonTokenOperator;
+import com.trunk.rx.json.OperatorJsonToken;
 
 /**
  * Thrown when a reader encounters malformed JSON. Some syntax errors can be
- * ignored by calling {@link JsonTokenOperator#lenient()}.
+ * ignored by calling {@link OperatorJsonToken#lenient()}.
  */
 public final class MalformedJsonException extends RuntimeException {
   private static final long serialVersionUID = 1L;

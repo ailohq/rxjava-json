@@ -3,25 +3,22 @@ package com.trunk.rx.json;
 import java.util.Objects;
 
 import com.trunk.rx.json.path.JsonPath;
-import com.trunk.rx.json.token.JsonToken;
-
-import rx.Observable;
 
 public class JsonPathEvent {
   private final JsonPath matchedPathFragment;
-  private final Observable<JsonToken> tokens;
+  private final JsonTokenEvent token;
 
-  public JsonPathEvent(JsonPath matchedPathFragment, Observable<JsonToken> tokens) {
+  public JsonPathEvent(JsonPath matchedPathFragment, JsonTokenEvent token) {
     this.matchedPathFragment = matchedPathFragment;
-    this.tokens = tokens;
+    this.token = token;
   }
 
   public JsonPath getMatchedPathFragment() {
     return matchedPathFragment;
   }
 
-  public Observable<JsonToken> getTokens() {
-    return tokens;
+  public JsonTokenEvent getTokenEvent() {
+    return token;
   }
 
   @Override
@@ -34,19 +31,19 @@ public class JsonPathEvent {
     }
     JsonPathEvent that = (JsonPathEvent) o;
     return Objects.equals(matchedPathFragment, that.matchedPathFragment) &&
-      Objects.equals(tokens, that.tokens);
+      Objects.equals(token, that.token);
   }
 
   @Override
   public int hashCode() {
-    return Objects.hash(matchedPathFragment, tokens);
+    return Objects.hash(matchedPathFragment, token);
   }
 
   @Override
   public String toString() {
     final StringBuilder sb = new StringBuilder("JsonPathEvent{");
     sb.append("matchedPathFragment='").append(matchedPathFragment).append('\'');
-    sb.append(", tokens=").append(tokens);
+    sb.append(", token=").append(token);
     sb.append('}');
     return sb.toString();
   }
