@@ -1,8 +1,11 @@
-package com.trunk.rx.json;
+package com.trunk.rx.json.transformer;
 
 import org.testng.annotations.Test;
 
+import com.trunk.rx.json.JsonPathEvent;
+import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.operator.OperatorJsonToken;
+import com.trunk.rx.json.operator.OperatorJsonTokenTest;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.path.NoopToken;
 import com.trunk.rx.json.path.RootToken;
@@ -10,7 +13,6 @@ import com.trunk.rx.json.token.JsonArray;
 import com.trunk.rx.json.token.JsonDocumentEnd;
 import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.token.JsonToken;
-import com.trunk.rx.json.transformer.TransformerJsonPath;
 import com.trunk.rx.string.StringObservable;
 
 import rx.Observable;

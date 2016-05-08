@@ -12,6 +12,10 @@ public class TransformerRxJson implements Observable.Transformer<String, JsonPat
   private final OperatorJsonToken operatorJsonToken;
   private final TransformerJsonPath transformerJsonPath;
 
+  public static TransformerRxJson from(String... paths) {
+    return new TransformerRxJson(new OperatorJsonToken(), TransformerJsonPath.from(paths));
+  }
+
   public static TransformerRxJson from(JsonPath... paths) {
     return new TransformerRxJson(new OperatorJsonToken(), TransformerJsonPath.from(paths));
   }

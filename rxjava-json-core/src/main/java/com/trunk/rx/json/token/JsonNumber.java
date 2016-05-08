@@ -2,7 +2,7 @@ package com.trunk.rx.json.token;
 
 import java.util.Objects;
 
-public class JsonNumber implements JsonToken {
+public class JsonNumber extends BaseToken {
   private final String value;
 
   public static JsonNumber of(String value) {
@@ -11,6 +11,11 @@ public class JsonNumber implements JsonToken {
 
   private JsonNumber(String value) {
     this.value = value;
+  }
+
+  @Override
+  public boolean isNumber() {
+    return true;
   }
 
   @Override

@@ -1,0 +1,14 @@
+plugins {
+    id "com.jfrog.bintray" version "1.2"
+}
+
+description = 'GSON extensions for RxJava-JSON'
+
+dependencies {
+    compile project(':rxjava-json-core')
+    compile 'com.google.code.gson:gson:2.6.2'
+
+    testCompile 'com.google.guava:guava:19.0'
+}
+
+apply from: '../bintray.gradle'

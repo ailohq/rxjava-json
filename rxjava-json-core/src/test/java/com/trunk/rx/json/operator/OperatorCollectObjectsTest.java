@@ -15,7 +15,7 @@ import com.trunk.rx.json.token.JsonString;
 import rx.Observable;
 import rx.observers.TestSubscriber;
 
-import static org.testng.Assert.*;
+import static org.testng.Assert.assertEquals;
 
 public class OperatorCollectObjectsTest {
   @Test

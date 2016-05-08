@@ -2,7 +2,7 @@ package com.trunk.rx.json.token;
 
 import java.util.Objects;
 
-public class JsonBoolean implements JsonToken {
+public class JsonBoolean extends BaseToken {
   private final String value;
 
   private static JsonBoolean TRUE = new JsonBoolean("true");
@@ -18,6 +18,11 @@ public class JsonBoolean implements JsonToken {
 
   private JsonBoolean(String value) {
     this.value = value;
+  }
+
+  @Override
+  public boolean isBoolean() {
+    return true;
   }
 
   @Override

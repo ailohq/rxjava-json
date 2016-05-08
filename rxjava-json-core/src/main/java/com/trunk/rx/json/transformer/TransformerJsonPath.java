@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 import com.trunk.rx.json.JsonPathEvent;
 import com.trunk.rx.json.JsonTokenEvent;
@@ -20,6 +21,10 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
 
   private final ConcurrentHashMap<JsonPath, Integer> visitedMatchers = new ConcurrentHashMap<>();
   private final ConcurrentHashMap<JsonPath, Integer> completedMatchers = new ConcurrentHashMap<>();
+
+  public static TransformerJsonPath from(String... paths) {
+    return from(Arrays.asList(paths).stream().map(s -> JsonPath.parse(s)).collect(Collectors.toList()));
+  }
 
   public static TransformerJsonPath from(JsonPath... matchers) {
     return from(Arrays.asList(matchers));

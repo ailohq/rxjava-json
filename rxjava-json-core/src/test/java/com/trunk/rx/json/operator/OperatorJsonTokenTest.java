@@ -1,4 +1,4 @@
-package com.trunk.rx.json;
+package com.trunk.rx.json.operator;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -12,8 +12,8 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.exception.MalformedJsonException;
-import com.trunk.rx.json.operator.OperatorJsonToken;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.path.NoopToken;
 import com.trunk.rx.json.token.JsonArray;
@@ -2267,7 +2267,7 @@ public class OperatorJsonTokenTest {
     return builder.toString();
   }
 
-  public static final String[] EMPTY_ARRAY = new String[0];
+  public static final String[] EMPTY_ARRAY = {};
 
   public static TestItem should(String description) {
     return new TestItem(
@@ -2318,7 +2318,6 @@ public class OperatorJsonTokenTest {
                      Optional<String> message,
                      Optional<Is> completed,
                      String description,
-
                      OperatorJsonToken operatorJsonToken) {
       this.jsonFragments = jsonFragments;
       this.expectedTokens = expectedTokens;
