@@ -12,6 +12,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.trunk.rx.character.CharacterObservable;
 import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.exception.MalformedJsonException;
 import com.trunk.rx.json.path.JsonPath;
@@ -28,7 +29,6 @@ import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.token.JsonObjectStart;
 import com.trunk.rx.json.token.JsonString;
 import com.trunk.rx.json.token.JsonToken;
-import com.trunk.rx.string.StringObservable;
 
 import rx.Observable;
 import rx.Subscription;
@@ -1561,7 +1561,7 @@ public class OperatorJsonTokenTest {
   public void shouldReturnPathWIthEachEvent() throws Exception {
     TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
     Observable.just("{\"a\":1234,\"b\":[1,2,3,4],\"c\":{\"w\":[5,6,7,8],\"x\":true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .lift(BASE_PARSER)
       .subscribe(ts);
 
@@ -1615,7 +1615,7 @@ public class OperatorJsonTokenTest {
   public void shouldReturnCorrectPathForMultipleDocumentsWhenLenient() throws Exception {
     TestSubscriber<JsonTokenEvent> ts = new TestSubscriber<>();
     Observable.just("{\"a\":1234} true [1,2,3] false")
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .lift(LENIENT_PARSER)
       .subscribe(ts);
 
@@ -1648,7 +1648,7 @@ public class OperatorJsonTokenTest {
   public void shouldExitEarly() throws Exception {
     StringBuilder buf = new StringBuilder();
     Observable.just("{\"a\":\"b\"} true [1,2,3] false")
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .doOnNext(c -> buf.append(c))
       .lift(LENIENT_PARSER)
       .take(3)
@@ -1662,7 +1662,7 @@ public class OperatorJsonTokenTest {
     TestSubscriber<JsonToken> ts = new TestSubscriber<>();
     ts.requestMore(0);
     StringBuilder emitted = new StringBuilder();
-    StringObservable.from(" true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
+    CharacterObservable.from(" true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
       .doOnNext(c -> emitted.append(c))
       .lift(LENIENT_PARSER)
       .map(e -> e.getToken())
@@ -2044,7 +2044,7 @@ public class OperatorJsonTokenTest {
     TestSubscriber<JsonToken> ts = new TestSubscriber<>();
     ts.requestMore(0);
     StringBuilder emitted = new StringBuilder();
-    StringObservable.from("  true  {  }  [  \"a\"  ,  b  ]  ")
+    CharacterObservable.from("  true  {  }  [  \"a\"  ,  b  ]  ")
       .doOnNext(c -> emitted.append(c))
       .lift(LENIENT_PARSER)
       .map(e -> e.getToken())
@@ -2156,7 +2156,7 @@ public class OperatorJsonTokenTest {
         .doOnNext(i -> {
           if (i % 100_000 == 0) {System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));}
         })
-        .concatMap(i -> StringObservable.from(" { } "))
+        .concatMap(i -> CharacterObservable.from(" { } "))
         .doOnNext(c -> chars[0] += 1)
         .lift(LENIENT_PARSER)
         .doOnNext(t -> tokens[0] += 1)
@@ -2176,7 +2176,7 @@ public class OperatorJsonTokenTest {
       .doOnNext(i -> {
         if (i % 100_000 == 0) {System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));}
       })
-      .concatMap(i -> StringObservable.from(" { } "))
+      .concatMap(i -> CharacterObservable.from(" { } "))
       .doOnNext(c -> chars[0] += 1)
       .lift(LENIENT_PARSER)
       .doOnNext(t -> tokens[0] += 1)
@@ -2198,7 +2198,7 @@ public class OperatorJsonTokenTest {
       .doOnNext(i -> {
         if (i % 100_000 == 0) {System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));}
       })
-      .concatMap(i -> StringObservable.from(" { } "))
+      .concatMap(i -> CharacterObservable.from(" { } "))
       .doOnNext(c -> chars[0] += 1)
       .lift(LENIENT_PARSER)
       .doOnNext(t -> tokens[0] += 1)
@@ -2361,7 +2361,7 @@ public class OperatorJsonTokenTest {
       try {
         TestSubscriber<JsonToken> ts = new TestSubscriber<>();
         Observable.from(jsonFragments)
-          .lift(StringObservable.toCharacter())
+          .lift(CharacterObservable.toCharacter())
           .lift(operatorJsonToken)
           .map(e -> e.getToken())
           .subscribe(ts);

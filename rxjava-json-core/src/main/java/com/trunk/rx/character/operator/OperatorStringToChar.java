@@ -1,4 +1,4 @@
-package com.trunk.rx.string.operator;
+package com.trunk.rx.character.operator;
 
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedDeque;

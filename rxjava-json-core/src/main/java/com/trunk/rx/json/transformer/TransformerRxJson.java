@@ -1,10 +1,10 @@
 package com.trunk.rx.json.transformer;
 
+import com.trunk.rx.character.CharacterObservable;
 import com.trunk.rx.json.JsonObjectEvent;
 import com.trunk.rx.json.JsonPathEvent;
 import com.trunk.rx.json.operator.OperatorJsonToken;
 import com.trunk.rx.json.path.JsonPath;
-import com.trunk.rx.string.StringObservable;
 
 import rx.Observable;
 
@@ -39,7 +39,7 @@ public class TransformerRxJson implements Observable.Transformer<String, JsonPat
 
   @Override
   public Observable<JsonPathEvent> call(Observable<String> upstream) {
-    return upstream.lift(StringObservable.toCharacter())
+    return upstream.lift(CharacterObservable.toCharacter())
       .lift(operatorJsonToken)
       .compose(transformerJsonPath);
   }

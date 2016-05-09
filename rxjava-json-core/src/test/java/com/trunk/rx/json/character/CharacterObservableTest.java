@@ -1,4 +1,4 @@
-package com.trunk.rx.json.string;
+package com.trunk.rx.json.character;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -6,19 +6,19 @@ import java.util.List;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
-import com.trunk.rx.string.StringObservable;
+import com.trunk.rx.character.CharacterObservable;
 
 import rx.Observable;
 import rx.observers.TestSubscriber;
 
 import static org.testng.Assert.assertEquals;
 
-public class StringObservableTest {
+public class CharacterObservableTest {
 
   @Test
   public void observableShouldBreakUpString() throws Exception {
     TestSubscriber<Character> t = new TestSubscriber<>();
-    StringObservable.from("this is a string")
+    CharacterObservable.from("this is a string")
       .subscribe(t);
     t.assertNoErrors();
     t.assertCompleted();
@@ -29,7 +29,7 @@ public class StringObservableTest {
   public void observableShouldStopEmittingOnUnsubscribe() throws Exception {
     List<Character> cs = new ArrayList<>();
     TestSubscriber<Character> t = new TestSubscriber<>();
-    StringObservable.from("this is a string")
+    CharacterObservable.from("this is a string")
       .doOnNext(c -> cs.add(c))
       .take(5)
       .subscribe(t);
@@ -42,7 +42,7 @@ public class StringObservableTest {
   @Test
   public void observableShouldCompleteImmediatelyWithEmptyString() throws Exception {
     TestSubscriber<Character> t = new TestSubscriber<>();
-    StringObservable.from("")
+    CharacterObservable.from("")
       .subscribe(t);
     t.assertNoErrors();
     t.assertCompleted();
@@ -53,7 +53,7 @@ public class StringObservableTest {
   public void operatorShouldCompleteImmediatelyWithEmptyString() throws Exception {
     TestSubscriber<Character> t = new TestSubscriber<>();
     Observable.just("")
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .subscribe(t);
     t.assertNoErrors();
     t.assertCompleted();
@@ -64,7 +64,7 @@ public class StringObservableTest {
   public void operatorShouldSkipOverEmptyString() throws Exception {
     TestSubscriber<Character> t = new TestSubscriber<>();
     Observable.just("", "a", "", "b", "")
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .subscribe(t);
     t.assertNoErrors();
     t.assertCompleted();
@@ -75,7 +75,7 @@ public class StringObservableTest {
   public void operatorShouldCompleteImmediatelyWithEmptyUpstream() throws Exception {
     TestSubscriber<Character> t = new TestSubscriber<>();
     Observable.<String>empty()
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .subscribe(t);
     t.assertNoErrors();
     t.assertCompleted();
@@ -86,7 +86,7 @@ public class StringObservableTest {
   public void operatorShouldBreakUpString() throws Exception {
     TestSubscriber<Character> t = new TestSubscriber<>();
     Observable.just("this is ", "a string")
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .subscribe(t);
     t.assertValues('t', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 's', 't', 'r', 'i', 'n', 'g');
   }
@@ -98,7 +98,7 @@ public class StringObservableTest {
     Observable.just("this is ")
       .concatWith(Observable.error(exception))
       .concatWith(Observable.just("a string"))
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .subscribe(t);
     t.assertError(exception);
     t.assertValues('t', 'h', 'i', 's', ' ', 'i', 's', ' ');
@@ -109,7 +109,7 @@ public class StringObservableTest {
     List<Character> cs = new ArrayList<>();
     TestSubscriber<Character> t = new TestSubscriber<>();
     Observable.just("this is ", "a string")
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .doOnNext(c -> cs.add(c))
       .take(5)
       .subscribe(t);
@@ -126,7 +126,7 @@ public class StringObservableTest {
 
     Observable.just("t", "h", "", "i", "s is ", "a string")
       .doOnNext(ignore -> emitted[0] += 1)
-      .lift(StringObservable.toCharacter())
+      .lift(CharacterObservable.toCharacter())
       .subscribe(t);
 
     t.assertNoValues();
