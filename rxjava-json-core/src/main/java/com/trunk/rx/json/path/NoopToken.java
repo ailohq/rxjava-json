@@ -3,8 +3,6 @@ package com.trunk.rx.json.path;
 import java.util.List;
 import java.util.Optional;
 
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
-
 public class NoopToken extends JsonPath {
 
   public static final JsonPath INSTANCE = new NoopToken();
@@ -35,7 +33,7 @@ public class NoopToken extends JsonPath {
 
   @Override
   JsonPath cloneWith(JsonPath nextPathToken) {
-    throw new NotImplementedException();
+    return this;
   }
 
   @Override
