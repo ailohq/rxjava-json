@@ -88,7 +88,7 @@ public class JsonPathParserTest {
 
   @Test(expectedExceptions = MalformedPathException.class)
   public void shouldRejectSliceWithNoValues() throws Exception {
-    PARSER.parse("$.a[4:1]");
+    PARSER.parse("$.a[:]");
   }
 
   @Test(expectedExceptions = MalformedPathException.class)
