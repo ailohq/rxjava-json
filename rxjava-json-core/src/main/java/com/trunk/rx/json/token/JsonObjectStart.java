@@ -2,7 +2,11 @@ package com.trunk.rx.json.token;
 
 public class JsonObjectStart extends BaseToken {
 
-  protected static final JsonObjectStart INSTANCE = new JsonObjectStart();
+  private static final JsonObjectStart INSTANCE = new JsonObjectStart();
+
+  public static JsonObjectStart instance() {
+    return INSTANCE;
+  }
 
   private JsonObjectStart() {
     // do nothing

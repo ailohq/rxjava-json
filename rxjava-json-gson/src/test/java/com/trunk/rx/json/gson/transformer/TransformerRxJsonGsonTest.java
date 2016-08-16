@@ -1,10 +1,8 @@
 package com.trunk.rx.json.gson.transformer;
 
-import org.testng.annotations.Test;
-
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-
+import org.testng.annotations.Test;
 import rx.Observable;
 import rx.observers.TestSubscriber;
 

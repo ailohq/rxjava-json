@@ -2,7 +2,6 @@ package com.trunk.rx.character;
 
 import com.trunk.rx.character.operator.OnSubscribeStringToChar;
 import com.trunk.rx.character.operator.OperatorStringToChar;
-
 import rx.Observable;
 
 public class CharacterObservable {

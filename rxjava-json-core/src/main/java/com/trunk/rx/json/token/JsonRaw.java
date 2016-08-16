@@ -3,22 +3,18 @@ package com.trunk.rx.json.token;
 import java.util.Objects;
 
 /**
- * An unescaped, unquoted JSON string.
+ * A raw, unparsed JSON value that will be emitted as is.
  */
-public class JsonString extends BaseToken {
+public class JsonRaw extends BaseToken {
+
   private final String value;
 
-  public static JsonString of(String value) {
-    return new JsonString(value);
+  public static JsonRaw of(String rawString) {
+    return new JsonRaw(rawString);
   }
 
-  private JsonString(String value) {
+  private JsonRaw(String value) {
     this.value = value;
-  }
-
-  @Override
-  public boolean isString() {
-    return true;
   }
 
   @Override
@@ -34,7 +30,7 @@ public class JsonString extends BaseToken {
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-    JsonString that = (JsonString) o;
+    JsonRaw that = (JsonRaw) o;
     return Objects.equals(value, that.value);
   }
 
@@ -45,6 +41,7 @@ public class JsonString extends BaseToken {
 
   @Override
   public String toString() {
-    return "JsonString{value='" + value + "'}'";
+    return "JsonRaw{value='" + value + "'}'";
   }
+
 }

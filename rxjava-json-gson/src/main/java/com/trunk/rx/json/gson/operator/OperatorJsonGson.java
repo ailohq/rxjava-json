@@ -1,11 +1,5 @@
 package com.trunk.rx.json.gson.operator;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
-
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -15,10 +9,10 @@ import com.google.gson.JsonPrimitive;
 import com.trunk.rx.json.JsonPathEvent;
 import com.trunk.rx.json.exception.MalformedJsonException;
 import com.trunk.rx.json.gson.GsonPathEvent;
+import com.trunk.rx.json.gson.transformer.TransformerRxJsonGson;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.token.JsonBoolean;
 import com.trunk.rx.json.token.JsonToken;
-
 import rx.Observable;
 import rx.Producer;
 import rx.Subscriber;
@@ -26,9 +20,15 @@ import rx.functions.Action0;
 import rx.internal.operators.BackpressureUtils;
 import rx.observers.SerializedSubscriber;
 
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
+
 public class OperatorJsonGson implements Observable.Operator<GsonPathEvent, JsonPathEvent> {
 
-  private static final Gson GSON = new Gson();
+  private static final Gson GSON = TransformerRxJsonGson.DEFAULT_GSON;
 
   @Override
   public Subscriber<? super JsonPathEvent> call(Subscriber<? super GsonPathEvent> s) {

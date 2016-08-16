@@ -2,7 +2,11 @@ package com.trunk.rx.json.token;
 
 public class JsonNull extends BaseToken {
 
-  public static final JsonNull INSTANCE = new JsonNull();
+  private static final JsonNull INSTANCE = new JsonNull();
+
+  public static JsonNull instance() {
+    return INSTANCE;
+  }
 
   private JsonNull() {
     // do nothing

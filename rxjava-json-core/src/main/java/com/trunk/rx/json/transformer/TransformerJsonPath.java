@@ -1,18 +1,17 @@
 package com.trunk.rx.json.transformer;
 
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
-
 import com.trunk.rx.json.JsonPathEvent;
 import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.path.NoopToken;
 import com.trunk.rx.json.token.JsonDocumentEnd;
-
 import rx.Observable;
+
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class TransformerJsonPath implements Observable.Transformer<JsonTokenEvent, JsonPathEvent> {
 
@@ -32,7 +31,7 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
 
   public static TransformerJsonPath from(Collection<JsonPath> matchers) {
     if (matchers.isEmpty()) {
-      throw new IllegalArgumentException("One or more matchers must be supplied");
+      throw new IllegalArgumentException("One or more JsonPaths must be supplied");
     }
     return new TransformerJsonPath(Observable.from(matchers), false);
   }
@@ -55,8 +54,8 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
         jsonTokenEvent ->
           matches(jsonTokenEvent)
             .concatWith(
-              jsonTokenEvent.getToken() == JsonDocumentEnd.INSTANCE ?
-                Observable.just(new JsonPathEvent(NoopToken.INSTANCE, jsonTokenEvent)) :
+              jsonTokenEvent.getToken() == JsonDocumentEnd.instance() ?
+                Observable.just(new JsonPathEvent(NoopToken.instance(), jsonTokenEvent)) :
                 Observable.empty()
             )
       );
@@ -89,14 +88,14 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
         }
       })
       .map(wrapper -> wrapper.matched)
-      .reduce(NoopToken.INSTANCE, (matchedPath, acc) -> matchedPath.length() < acc.length() ? matchedPath : acc)
+      .reduce(NoopToken.instance(), (matchedPath, acc) -> matchedPath.length() < acc.length() ? matchedPath : acc)
       .doOnNext(t -> {
         // if we got no result, any visited matchers are complete
-        if (!lenient && t == NoopToken.INSTANCE) {
+        if (!lenient && t == NoopToken.instance()) {
           visitedMatchers.entrySet().stream().filter(p -> p.getValue() == 1).forEach(p -> completedMatchers.put(p.getKey(), 1));
         }
       })
-      .filter(t -> t != NoopToken.INSTANCE)
+      .filter(t -> t != NoopToken.instance())
       .map(shortestMatchedPath -> new JsonPathEvent(shortestMatchedPath, jsonTokenEvent));
   }
 

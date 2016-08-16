@@ -1,5 +1,16 @@
 package com.trunk.rx.json.operator;
 
+import com.trunk.rx.json.JsonObjectEvent;
+import com.trunk.rx.json.JsonPathEvent;
+import com.trunk.rx.json.JsonTokenEvent;
+import com.trunk.rx.json.path.JsonPath;
+import com.trunk.rx.json.token.JsonDocumentEnd;
+import rx.Producer;
+import rx.Subscriber;
+import rx.functions.Action0;
+import rx.internal.operators.BackpressureUtils;
+import rx.observers.SerializedSubscriber;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Queue;
@@ -7,18 +18,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
-
-import com.trunk.rx.json.JsonObjectEvent;
-import com.trunk.rx.json.JsonPathEvent;
-import com.trunk.rx.json.JsonTokenEvent;
-import com.trunk.rx.json.path.JsonPath;
-import com.trunk.rx.json.token.JsonDocumentEnd;
-
-import rx.Producer;
-import rx.Subscriber;
-import rx.functions.Action0;
-import rx.internal.operators.BackpressureUtils;
-import rx.observers.SerializedSubscriber;
 
 public class OperatorCollectObjects implements rx.Observable.Operator<JsonObjectEvent, com.trunk.rx.json.JsonPathEvent> {
 
@@ -199,7 +198,7 @@ public class OperatorCollectObjects implements rx.Observable.Operator<JsonObject
     }
 
     private boolean isDocumentEnd(JsonPathEvent pathEvent) {
-      return pathEvent.getTokenEvent().getToken() == JsonDocumentEnd.INSTANCE;
+      return pathEvent.getTokenEvent().getToken() == JsonDocumentEnd.instance();
     }
 
     private void complete() {

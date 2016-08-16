@@ -5,7 +5,11 @@ import java.util.Optional;
 
 public class NoopToken extends JsonPath {
 
-  public static final JsonPath INSTANCE = new NoopToken();
+  private static final JsonPath INSTANCE = new NoopToken();
+
+  public static JsonPath instance() {
+    return INSTANCE;
+  }
 
   private NoopToken() {
     super(null);

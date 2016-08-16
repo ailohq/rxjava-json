@@ -2,9 +2,9 @@ package com.trunk.rx.json.token;
 
 public class JsonObject {
   public static JsonObjectStart start() {
-    return JsonObjectStart.INSTANCE;
+    return JsonObjectStart.instance();
   }
   public static JsonObjectEnd end() {
-    return JsonObjectEnd.INSTANCE;
+    return JsonObjectEnd.instance();
   }
 }

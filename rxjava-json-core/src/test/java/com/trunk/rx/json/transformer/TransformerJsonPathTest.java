@@ -1,7 +1,5 @@
 package com.trunk.rx.json.transformer;
 
-import org.testng.annotations.Test;
-
 import com.trunk.rx.character.CharacterObservable;
 import com.trunk.rx.json.JsonPathEvent;
 import com.trunk.rx.json.JsonTokenEvent;
@@ -14,7 +12,7 @@ import com.trunk.rx.json.token.JsonArray;
 import com.trunk.rx.json.token.JsonDocumentEnd;
 import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.token.JsonToken;
-
+import org.testng.annotations.Test;
 import rx.Observable;
 import rx.observers.TestSubscriber;
 
@@ -36,7 +34,7 @@ public class TransformerJsonPathTest {
 
     ts.assertNoErrors();
     ts.assertCompleted();
-    ts.assertValue(new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE)));
+    ts.assertValue(new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance())));
   }
 
   @Test
@@ -52,7 +50,7 @@ public class TransformerJsonPathTest {
 
     ts.assertNoErrors();
     ts.assertCompleted();
-    ts.assertValues(RootToken.INSTANCE, NoopToken.INSTANCE);
+    ts.assertValues(RootToken.instance(), NoopToken.instance());
   }
 
   @Test
@@ -92,7 +90,7 @@ public class TransformerJsonPathTest {
 
     ts.assertNoErrors();
     ts.assertCompleted();
-    ts.assertValues(RootToken.INSTANCE, NoopToken.INSTANCE);
+    ts.assertValues(RootToken.instance(), NoopToken.instance());
   }
 
   @Test
@@ -206,7 +204,7 @@ public class TransformerJsonPathTest {
       .subscribe(ts);
 
     ts.assertValues(
-      JsonPath.parse("$"), JsonPath.parse("$"), NoopToken.INSTANCE
+      JsonPath.parse("$"), JsonPath.parse("$"), NoopToken.instance()
     );
   }
 
@@ -222,9 +220,9 @@ public class TransformerJsonPathTest {
       .subscribe(ts);
 
     ts.assertValues(
-      JsonPath.parse("$.a.b[1]"), NoopToken.INSTANCE,
-      JsonPath.parse("$.a.b[1]"), NoopToken.INSTANCE,
-      JsonPath.parse("$.a.b[1]"), NoopToken.INSTANCE
+      JsonPath.parse("$.a.b[1]"), NoopToken.instance(),
+      JsonPath.parse("$.a.b[1]"), NoopToken.instance(),
+      JsonPath.parse("$.a.b[1]"), NoopToken.instance()
     );
   }
 
@@ -240,7 +238,7 @@ public class TransformerJsonPathTest {
       new JsonTokenEvent(JsonObject.start(), JsonPath.parse("$[0]")),
       new JsonTokenEvent(JsonObject.end(), JsonPath.parse("$[0]")),
       new JsonTokenEvent(JsonArray.end(), JsonPath.parse("$")),
-      new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE)
+      new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance())
     )
       .doOnNext(t -> emitted[0] = emitted[0] + 1)
       .compose(TransformerJsonPath.from(JsonPath.parse("$..*")))
@@ -290,7 +288,7 @@ public class TransformerJsonPathTest {
       new JsonTokenEvent(JsonObject.start(), JsonPath.parse("$[3]")),
       new JsonTokenEvent(JsonObject.end(), JsonPath.parse("$[3]")),
       new JsonTokenEvent(JsonArray.end(), JsonPath.parse("$"))
-    ).concatWith(Observable.just(new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE)))
+    ).concatWith(Observable.just(new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance())))
       .doOnNext(t -> emitted[0] = emitted[0] + 1)
       .compose(TransformerJsonPath.from(JsonPath.parse("$[*]")))
       .subscribe(ts);

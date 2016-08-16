@@ -1,14 +1,15 @@
 package com.trunk.rx.character.operator;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import rx.Observable;
 import rx.Producer;
 import rx.Subscriber;
 import rx.internal.operators.BackpressureUtils;
 
+import java.util.concurrent.atomic.AtomicLong;
+
 public class OnSubscribeStringToChar implements Observable.OnSubscribe<Character> {
   private final String source;
+
   public OnSubscribeStringToChar(String source) {
     this.source = source;
   }
@@ -46,7 +47,7 @@ public class OnSubscribeStringToChar implements Observable.OnSubscribe<Character
       }
       long r = n;
       // loop so that additional requests are processed in sequence
-      for (;;) {
+      for (; ; ) {
         if (subscriber.isUnsubscribed()) {
           return;
         }

@@ -1,13 +1,5 @@
 package com.trunk.rx.json.gson.operator;
 
-import java.util.Arrays;
-import java.util.Optional;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
 import com.google.common.collect.ImmutableList;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonPrimitive;
@@ -25,9 +17,15 @@ import com.trunk.rx.json.token.JsonNumber;
 import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.token.JsonString;
 import com.trunk.rx.json.token.JsonToken;
-
+import org.testng.Assert;
+import org.testng.annotations.Test;
 import rx.Observable;
 import rx.observers.TestSubscriber;
+
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static org.testng.Assert.assertEquals;
 
@@ -98,7 +96,7 @@ public class OperatorJsonGsonTest {
   @Test
   public void shouldParseNull() throws Exception {
     given(new OperatorJsonGson())
-      .when(event(JsonNull.INSTANCE))
+      .when(event(JsonNull.instance()))
       .then(com.google.gson.JsonNull.INSTANCE)
       .thenPath(PATH_A)
       .then(Is.COMPLETED)
@@ -110,9 +108,9 @@ public class OperatorJsonGsonTest {
     given(new OperatorJsonGson())
       .when(
         event(JsonString.of("a")),
-        event(JsonDocumentEnd.INSTANCE),
+        event(JsonDocumentEnd.instance()),
         event(JsonString.of("a")),
-        event(JsonDocumentEnd.INSTANCE)
+        event(JsonDocumentEnd.instance())
       )
       .then(new JsonPrimitive("a"), new JsonPrimitive("a"))
       .then(Is.COMPLETED)

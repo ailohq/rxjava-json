@@ -1,7 +1,5 @@
 package com.trunk.rx.json.operator;
 
-import org.testng.annotations.Test;
-
 import com.google.common.collect.ImmutableList;
 import com.trunk.rx.json.JsonObjectEvent;
 import com.trunk.rx.json.JsonPathEvent;
@@ -11,7 +9,7 @@ import com.trunk.rx.json.path.NoopToken;
 import com.trunk.rx.json.token.JsonArray;
 import com.trunk.rx.json.token.JsonDocumentEnd;
 import com.trunk.rx.json.token.JsonString;
-
+import org.testng.annotations.Test;
 import rx.Observable;
 import rx.observers.TestSubscriber;
 
@@ -25,7 +23,7 @@ public class OperatorCollectObjectsTest {
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.a[0]"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
-      new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonArray.start(), NoopToken.INSTANCE))
+      new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonArray.start(), NoopToken.instance()))
     )
       .lift(new OperatorCollectObjects())
       .subscribe(ts);
@@ -54,7 +52,7 @@ public class OperatorCollectObjectsTest {
       new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.b"))),
       new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.b[0]"))),
       new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.b"))),
-      new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE))
+      new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance()))
     )
       .lift(new OperatorCollectObjects())
       .subscribe(ts);
@@ -88,11 +86,11 @@ public class OperatorCollectObjectsTest {
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.a[0]"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
-      new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE)),
+      new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance())),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.a[0]"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
-      new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE))
+      new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance()))
     )
       .lift(new OperatorCollectObjects())
       .subscribe(ts);
@@ -134,7 +132,7 @@ public class OperatorCollectObjectsTest {
         Observable.just(
           new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.b[0]"))),
           new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.b"))),
-          new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE))
+          new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance()))
         )
       )
 
@@ -162,7 +160,7 @@ public class OperatorCollectObjectsTest {
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.a[0]"))),
       new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
-      new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE))
+      new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance()))
     )
       .concatWith(Observable.error(exception))
       .concatWith(
@@ -170,7 +168,7 @@ public class OperatorCollectObjectsTest {
           new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
           new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.a[0]"))),
           new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
-          new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE))
+          new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance()))
         )
       )
 
@@ -202,14 +200,14 @@ public class OperatorCollectObjectsTest {
       new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.b"))),
       new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.b[0]"))),
       new JsonPathEvent(JsonPath.parse("$.b"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.b"))),
-      new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE))
+      new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance()))
     )
       .concatWith(
         Observable.just(
           new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
           new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonString.of("a"), JsonPath.parse("$.a[0]"))),
           new JsonPathEvent(JsonPath.parse("$.a"), new JsonTokenEvent(JsonArray.start(), JsonPath.parse("$.a"))),
-          new JsonPathEvent(NoopToken.INSTANCE, new JsonTokenEvent(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE))
+          new JsonPathEvent(NoopToken.instance(), new JsonTokenEvent(JsonDocumentEnd.instance(), NoopToken.instance()))
         )
       )
       .doOnNext(e -> emitted[0] += 1)

@@ -1,9 +1,9 @@
 package com.trunk.rx.json;
 
-import java.util.Objects;
-
 import com.trunk.rx.json.path.JsonPath;
 import com.trunk.rx.json.token.JsonToken;
+
+import java.util.Objects;
 
 public class JsonTokenEvent {
   private final JsonToken token;

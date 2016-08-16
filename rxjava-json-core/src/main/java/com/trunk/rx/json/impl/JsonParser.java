@@ -1,16 +1,5 @@
 package com.trunk.rx.json.impl;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedDeque;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.exception.MalformedJsonException;
 import com.trunk.rx.json.path.ArrayIndexToken;
@@ -27,10 +16,19 @@ import com.trunk.rx.json.token.JsonNumber;
 import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.token.JsonString;
 import com.trunk.rx.json.token.JsonToken;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import rx.Producer;
 import rx.Subscriber;
 import rx.functions.Action0;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class JsonParser extends Subscriber<Character> {
   private static final Logger log = LoggerFactory.getLogger(JsonParser.class);
@@ -319,11 +317,11 @@ public class JsonParser extends Subscriber<Character> {
     } else if (hasSeparator) {
       if (lenient && (c == ',' || c == ';')) {
         incrementPathIndex();
-        emitDownstream(JsonNull.INSTANCE);
+        emitDownstream(JsonNull.instance());
       } else if (lenient && c == ']') {
         hasSeparator = false;
         popScope();
-        emitDownstream(JsonNull.INSTANCE);
+        emitDownstream(JsonNull.instance());
         emitDownstream(JsonArray.end());
         maybeEmitDocumentEnd();
       } else if (c == '[') {
@@ -363,7 +361,7 @@ public class JsonParser extends Subscriber<Character> {
       setScope(JsonScope.NONEMPTY_ARRAY);
       hasSeparator = true;
       incrementPathIndex();
-      emitDownstream(JsonNull.INSTANCE);
+      emitDownstream(JsonNull.instance());
     } else if (c == '}' || c == ':' || c == '=' || c == ',' || c == ';') {
       completeWithError(syntaxError("Expected value"));
     } else {
@@ -493,7 +491,7 @@ public class JsonParser extends Subscriber<Character> {
 
   private void maybeEmitDocumentEnd() {
     if (currentScope() == JsonScope.NONEMPTY_DOCUMENT) {
-      emitDownstream(JsonDocumentEnd.INSTANCE, NoopToken.INSTANCE);
+      emitDownstream(JsonDocumentEnd.instance(), NoopToken.instance());
       if (lenient) {
         setScope(JsonScope.EMPTY_DOCUMENT);
       }
@@ -725,7 +723,7 @@ public class JsonParser extends Subscriber<Character> {
     } else if (value.equalsIgnoreCase("false")) {
       return Optional.of(JsonBoolean.False());
     } else if (value.equalsIgnoreCase("null")) {
-      return Optional.of(JsonNull.INSTANCE);
+      return Optional.of(JsonNull.instance());
     } else if (lenient && (value.equals("NaN") || value.equals("-Infinity") || value.equals("Infinity"))) {
       return Optional.of(JsonNumber.of(value));
     } else if (lenient) {
@@ -858,7 +856,7 @@ public class JsonParser extends Subscriber<Character> {
    */
   private JsonPath getPath() {
     List<JsonPath> tokens = new ArrayList<>();
-    tokens.add(RootToken.INSTANCE);
+    tokens.add(RootToken.instance());
     for (int i = 0, size = stackSize; i < size; i++) {
       if (stack[i] == JsonScope.NONEMPTY_OBJECT || stack[i] == JsonScope.NONEMPTY_ARRAY) {
         tokens.add(paths[i]);

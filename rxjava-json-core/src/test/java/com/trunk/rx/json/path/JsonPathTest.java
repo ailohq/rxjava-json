@@ -8,16 +8,16 @@ import static org.testng.Assert.assertTrue;
 public class JsonPathTest {
   @Test
   public void rootShouldBeEqual() throws Exception {
-    assertEquals(JsonPath.from(RootToken.INSTANCE), JsonPath.from(RootToken.INSTANCE));
+    assertEquals(JsonPath.from(RootToken.instance()), JsonPath.from(RootToken.instance()));
   }
   @Test
   public void rootShouldHaveSameHash() throws Exception {
-    assertEquals(JsonPath.from(RootToken.INSTANCE).hashCode(), JsonPath.from(RootToken.INSTANCE).hashCode());
+    assertEquals(JsonPath.from(RootToken.instance()).hashCode(), JsonPath.from(RootToken.instance()).hashCode());
   }
 
   @Test
   public void allPathsShouldMatchRoot() throws Exception {
-    assertEquals(JsonPath.parse("$..*").match(JsonPath.parse("$")).toBlocking().single(), RootToken.INSTANCE);
+    assertEquals(JsonPath.parse("$..*").match(JsonPath.parse("$")).toBlocking().single(), RootToken.instance());
   }
 
   @Test

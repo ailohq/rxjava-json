@@ -1,9 +1,9 @@
 package com.trunk.rx.json;
 
+import com.trunk.rx.json.path.JsonPath;
+
 import java.util.Collection;
 import java.util.Objects;
-
-import com.trunk.rx.json.path.JsonPath;
 
 public class JsonObjectEvent {
   private final JsonPath path;

@@ -6,7 +6,11 @@ import java.util.Optional;
 
 public class RootToken extends JsonPath {
 
-  public static RootToken INSTANCE = new RootToken();
+  private static RootToken INSTANCE = new RootToken();
+
+  public static RootToken instance() {
+    return INSTANCE;
+  }
 
   private RootToken() {
     this(null);

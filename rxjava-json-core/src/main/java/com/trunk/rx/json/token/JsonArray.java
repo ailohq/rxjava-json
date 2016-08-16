@@ -2,9 +2,9 @@ package com.trunk.rx.json.token;
 
 public class JsonArray {
   public static JsonArrayStart start() {
-    return JsonArrayStart.INSTANCE;
+    return JsonArrayStart.instance();
   }
   public static JsonArrayEnd end() {
-    return JsonArrayEnd.INSTANCE;
+    return JsonArrayEnd.instance();
   }
 }

@@ -1,12 +1,12 @@
 package com.trunk.rx.json.path;
 
+import rx.Observable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-
-import rx.Observable;
 
 public abstract class JsonPath implements Cloneable {
 

@@ -1,9 +1,9 @@
 package com.trunk.rx.json.gson;
 
-import java.util.Objects;
-
 import com.google.gson.JsonElement;
 import com.trunk.rx.json.path.JsonPath;
+
+import java.util.Objects;
 
 public class GsonPathEvent {
   private final JsonPath path;

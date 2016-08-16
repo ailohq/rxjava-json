@@ -1,9 +1,8 @@
 package com.trunk.rx.json.path;
 
-import org.testng.annotations.Test;
-
 import com.google.common.collect.ImmutableList;
 import com.trunk.rx.json.exception.MalformedPathException;
+import org.testng.annotations.Test;
 
 import static org.testng.Assert.assertEquals;
 
@@ -143,97 +142,97 @@ public class JsonPathParserTest {
 
   @Test
   public void shouldAllowRootOnly() throws Exception {
-    assertEquals(PARSER.parse("$"), ImmutableList.of(RootToken.INSTANCE));
+    assertEquals(PARSER.parse("$"), ImmutableList.of(RootToken.instance()));
   }
 
   @Test
   public void shouldConvertAllElementsToRoot() throws Exception {
-    assertEquals(PARSER.parse("$..*"), ImmutableList.of(RootToken.INSTANCE));
+    assertEquals(PARSER.parse("$..*"), ImmutableList.of(RootToken.instance()));
   }
 
   @Test
   public void shouldAllowObjectBareName() throws Exception {
-    assertEquals(PARSER.parse("$.a"), ImmutableList.of(RootToken.INSTANCE, ObjectToken.of("a")));
+    assertEquals(PARSER.parse("$.a"), ImmutableList.of(RootToken.instance(), ObjectToken.of("a")));
   }
 
   @Test
   public void shouldAllowRecursiveThenObjectBareName() throws Exception {
-    assertEquals(PARSER.parse("$..a"), ImmutableList.of(RootToken.INSTANCE, RecursiveToken.INSTANCE, ObjectToken.of("a")));
+    assertEquals(PARSER.parse("$..a"), ImmutableList.of(RootToken.instance(), RecursiveToken.instance(), ObjectToken.of("a")));
   }
 
   @Test
   public void shouldAllowRecursiveThenObjectQuotedName() throws Exception {
-    assertEquals(PARSER.parse("$..['a']"), ImmutableList.of(RootToken.INSTANCE, RecursiveToken.INSTANCE, ObjectToken.of("a")));
+    assertEquals(PARSER.parse("$..['a']"), ImmutableList.of(RootToken.instance(), RecursiveToken.instance(), ObjectToken.of("a")));
   }
 
   @Test
   public void shouldAllowRecursiveThenArray() throws Exception {
-    assertEquals(PARSER.parse("$..[1]"), ImmutableList.of(RootToken.INSTANCE, RecursiveToken.INSTANCE, ArrayIndexToken.of(1)));
+    assertEquals(PARSER.parse("$..[1]"), ImmutableList.of(RootToken.instance(), RecursiveToken.instance(), ArrayIndexToken.of(1)));
   }
 
   @Test
   public void shouldAllowObjectStringNameSingleQuotes() throws Exception {
-    assertEquals(PARSER.parse("$['a']"), ImmutableList.of(RootToken.INSTANCE, ObjectToken.of("a")));
+    assertEquals(PARSER.parse("$['a']"), ImmutableList.of(RootToken.instance(), ObjectToken.of("a")));
   }
 
   @Test
   public void shouldAllowObjectStringNameDoubleQuotes() throws Exception {
-    assertEquals(PARSER.parse("$[\"a\"]"), ImmutableList.of(RootToken.INSTANCE, ObjectToken.of("a")));
+    assertEquals(PARSER.parse("$[\"a\"]"), ImmutableList.of(RootToken.instance(), ObjectToken.of("a")));
   }
 
   @Test
   public void shouldJsonDecodeStringName() throws Exception {
-    assertEquals(PARSER.parse("$['\\t\\b\\n\\r\\f\\'\\\"\\n\\u0019']"), ImmutableList.of(RootToken.INSTANCE, ObjectToken.of("\t\b\n\r\f\'\"\n\u0019")));
+    assertEquals(PARSER.parse("$['\\t\\b\\n\\r\\f\\'\\\"\\n\\u0019']"), ImmutableList.of(RootToken.instance(), ObjectToken.of("\t\b\n\r\f\'\"\n\u0019")));
   }
 
   @Test
   public void shouldAllowObjectWildCard() throws Exception {
-    assertEquals(PARSER.parse("$.*"), ImmutableList.of(RootToken.INSTANCE, WildcardToken.object()));
+    assertEquals(PARSER.parse("$.*"), ImmutableList.of(RootToken.instance(), WildcardToken.object()));
   }
 
   @Test
   public void shouldAllowArrayIndex() throws Exception {
-    assertEquals(PARSER.parse("$[1]"), ImmutableList.of(RootToken.INSTANCE, ArrayIndexToken.of(1)));
+    assertEquals(PARSER.parse("$[1]"), ImmutableList.of(RootToken.instance(), ArrayIndexToken.of(1)));
   }
 
   @Test
   public void shouldAllowArrayWildCard() throws Exception {
-    assertEquals(PARSER.parse("$[*]"), ImmutableList.of(RootToken.INSTANCE, WildcardToken.array()));
+    assertEquals(PARSER.parse("$[*]"), ImmutableList.of(RootToken.instance(), WildcardToken.array()));
   }
 
   @Test
   public void shouldAllowSlice() throws Exception {
-    assertEquals(PARSER.parse("$[1:2]"), ImmutableList.of(RootToken.INSTANCE, ArraySliceToken.of(1, 2)));
+    assertEquals(PARSER.parse("$[1:2]"), ImmutableList.of(RootToken.instance(), ArraySliceToken.of(1, 2)));
   }
 
   @Test
   public void shouldAllowSliceWithStartOnly() throws Exception {
-    assertEquals(PARSER.parse("$[1:]"), ImmutableList.of(RootToken.INSTANCE, ArraySliceToken.of(1, null)));
+    assertEquals(PARSER.parse("$[1:]"), ImmutableList.of(RootToken.instance(), ArraySliceToken.of(1, null)));
   }
 
   @Test
   public void shouldAllowSliceWithEndOnly() throws Exception {
-    assertEquals(PARSER.parse("$[:2]"), ImmutableList.of(RootToken.INSTANCE, ArraySliceToken.of(null, 2)));
+    assertEquals(PARSER.parse("$[:2]"), ImmutableList.of(RootToken.instance(), ArraySliceToken.of(null, 2)));
   }
 
   @Test
   public void shouldAllowArrayWithSteps() throws Exception {
-    assertEquals(PARSER.parse("$[0:10:2]"), ImmutableList.of(RootToken.INSTANCE, ArrayStepToken.of(0, 10, 2)));
+    assertEquals(PARSER.parse("$[0:10:2]"), ImmutableList.of(RootToken.instance(), ArrayStepToken.of(0, 10, 2)));
   }
 
   @Test
   public void shouldAllowArrayWithStepsWithNoEnd() throws Exception {
-    assertEquals(PARSER.parse("$[0::2]"), ImmutableList.of(RootToken.INSTANCE, ArrayStepToken.of(0, null, 2)));
+    assertEquals(PARSER.parse("$[0::2]"), ImmutableList.of(RootToken.instance(), ArrayStepToken.of(0, null, 2)));
   }
 
   @Test
   public void shouldAllowArrayWithStepsNoStart() throws Exception {
-    assertEquals(PARSER.parse("$[:10:2]"), ImmutableList.of(RootToken.INSTANCE, ArrayStepToken.of(null, 10, 2)));
+    assertEquals(PARSER.parse("$[:10:2]"), ImmutableList.of(RootToken.instance(), ArrayStepToken.of(null, 10, 2)));
   }
 
   @Test
   public void shouldAllowArrayWithStepsNoStartOrEnd() throws Exception {
-    assertEquals(PARSER.parse("$[::2]"), ImmutableList.of(RootToken.INSTANCE, ArrayStepToken.of(null, null, 2)));
+    assertEquals(PARSER.parse("$[::2]"), ImmutableList.of(RootToken.instance(), ArrayStepToken.of(null, null, 2)));
   }
 
   @Test
@@ -241,7 +240,7 @@ public class JsonPathParserTest {
     assertEquals(
       PARSER.parse("$[1,3:5,0:10:2]"),
       ImmutableList.of(
-        RootToken.INSTANCE,
+        RootToken.instance(),
         ArrayUnionToken.using(
           ArrayIndexToken.of(1),
           ArraySliceToken.of(3, 5),
@@ -256,12 +255,12 @@ public class JsonPathParserTest {
     assertEquals(
       PARSER.parse("$.foo['b a r'][*].*..bim.baz[5]"),
       ImmutableList.of(
-        RootToken.INSTANCE,
+        RootToken.instance(),
         ObjectToken.of("foo"),
         ObjectToken.of("b a r"),
         WildcardToken.array(),
         WildcardToken.object(),
-        RecursiveToken.INSTANCE,
+        RecursiveToken.instance(),
         ObjectToken.of("bim"),
         ObjectToken.of("baz"),
         ArrayIndexToken.of(5)

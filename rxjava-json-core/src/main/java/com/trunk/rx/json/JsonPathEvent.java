@@ -1,8 +1,9 @@
 package com.trunk.rx.json;
 
+import com.trunk.rx.json.path.JsonPath;
+
 import java.util.Objects;
 
-import com.trunk.rx.json.path.JsonPath;
 
 public class JsonPathEvent {
   private final JsonPath matchedPathFragment;

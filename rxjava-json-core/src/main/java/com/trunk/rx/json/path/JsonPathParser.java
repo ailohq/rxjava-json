@@ -1,12 +1,12 @@
 package com.trunk.rx.json.path;
 
+import com.trunk.rx.json.exception.MalformedPathException;
+import com.trunk.rx.json.impl.CharacterIndex;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
-
-import com.trunk.rx.json.exception.MalformedPathException;
-import com.trunk.rx.json.impl.CharacterIndex;
 
 import static com.trunk.rx.json.impl.JsonParser.getEscapedUnicode;
 import static java.lang.Character.isWhitespace;
@@ -153,7 +153,7 @@ public class JsonPathParser {
           throw new MalformedPathException("All elements can only occur after root and must be the last token at position " + path.position());
         }
       }
-      tokens.add(RecursiveToken.INSTANCE);
+      tokens.add(RecursiveToken.instance());
       if (!path.inBounds()) {
         unexpectedEndOfPath(path);
       } else if (path.currentCharIs('[')) {
@@ -277,7 +277,7 @@ public class JsonPathParser {
       illegalCharacter(path, "$");
     }
     path.incrementPosition(1);
-    tokens.add(RootToken.INSTANCE);
+    tokens.add(RootToken.instance());
   }
 
   private void readWhitespace(CharacterIndex path) {

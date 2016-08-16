@@ -16,6 +16,10 @@ public class JsonBoolean extends BaseToken {
     return FALSE;
   }
 
+  public static JsonBoolean of(boolean b) {
+    return b ? TRUE : FALSE;
+  }
+
   private JsonBoolean(String value) {
     this.value = value;
   }

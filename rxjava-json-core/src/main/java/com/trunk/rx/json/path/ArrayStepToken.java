@@ -1,8 +1,8 @@
 package com.trunk.rx.json.path;
 
-import java.util.Objects;
-
 import com.trunk.rx.json.exception.MalformedPathException;
+
+import java.util.Objects;
 
 public class ArrayStepToken extends ArrayToken {
 

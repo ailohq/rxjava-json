@@ -1,17 +1,16 @@
 package com.trunk.rx.json.operator;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.trunk.rx.json.JsonTokenEvent;
 import com.trunk.rx.json.impl.JsonParser;
 import com.trunk.rx.json.token.JsonToken;
-
 import rx.Observable;
 import rx.Observable.Operator;
 import rx.Producer;
 import rx.Subscriber;
 import rx.internal.operators.BackpressureUtils;
 import rx.observers.SerializedSubscriber;
+
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Lift an {@link Observable} of String fragments to an

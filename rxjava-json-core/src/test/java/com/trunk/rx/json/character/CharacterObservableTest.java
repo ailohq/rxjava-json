@@ -1,15 +1,13 @@
 package com.trunk.rx.json.character;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import org.testng.annotations.Test;
-
 import com.google.common.collect.ImmutableList;
 import com.trunk.rx.character.CharacterObservable;
-
+import org.testng.annotations.Test;
 import rx.Observable;
 import rx.observers.TestSubscriber;
+
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.testng.Assert.assertEquals;
 

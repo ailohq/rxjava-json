@@ -2,7 +2,11 @@ package com.trunk.rx.json.token;
 
 public class JsonArrayEnd extends BaseToken {
 
-  protected static final JsonArrayEnd INSTANCE = new JsonArrayEnd();
+  private static final JsonArrayEnd INSTANCE = new JsonArrayEnd();
+
+  public static JsonArrayEnd instance() {
+    return INSTANCE;
+  }
 
   private JsonArrayEnd() {
     // do nothing
