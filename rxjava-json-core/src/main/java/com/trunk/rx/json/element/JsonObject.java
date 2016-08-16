@@ -22,6 +22,14 @@ public class JsonObject extends JsonElement {
     return new JsonObject(Observable.from(elements));
   }
 
+  public static JsonObject of(Entry... elements) {
+    return new JsonObject(Observable.from(elements));
+  }
+
+  public static Entry entry(String key, JsonElement value) {
+    return new Entry(key, value);
+  }
+
   protected JsonObject(Observable<Entry> elements) {
     super(
         Observable.<JsonToken>just(com.trunk.rx.json.token.JsonObject.start())
@@ -50,7 +58,7 @@ public class JsonObject extends JsonElement {
   }
 
   public JsonObject add(String key, JsonElement value) {
-    return new JsonObject(this.elements.concatWith(Observable.just(new Entry(key, value))));
+    return new JsonObject(this.elements.concatWith(Observable.just(entry(key, value))));
   }
 
   public static class Entry {

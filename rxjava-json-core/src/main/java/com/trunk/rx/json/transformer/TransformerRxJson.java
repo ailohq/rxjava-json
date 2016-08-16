@@ -38,6 +38,7 @@ public class TransformerRxJson implements Observable.Transformer<String, JsonPat
    * By default, RxJson is strict and only accepts JSON as specified by
    * <a href="http://www.ietf.org/rfc/rfc4627.txt">RFC 4627</a>. This option makes the parser
    * liberal in what it accepts. This follows the rules from <a href="https://github.com/google/gson">Gson</a>.
+   * In addition, running in lenient mode will parse multiple JSON documents in a single stream.
    *
    * @return a new TransformerRxJson that will parse leniently
    */

@@ -20,6 +20,10 @@ public class JsonArray extends JsonElement {
     return new JsonArray(Observable.from(elements));
   }
 
+  public static JsonArray of(JsonElement... elements) {
+    return new JsonArray(Observable.from(elements));
+  }
+
   protected JsonArray(Observable<JsonElement> elements) {
     super(
       Observable.<JsonToken>just(com.trunk.rx.json.token.JsonArray.start())

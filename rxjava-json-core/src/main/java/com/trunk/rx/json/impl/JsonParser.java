@@ -1,6 +1,7 @@
 package com.trunk.rx.json.impl;
 
 import com.trunk.rx.json.JsonTokenEvent;
+import com.trunk.rx.json.element.JsonNonExecutablePrefix;
 import com.trunk.rx.json.exception.MalformedJsonException;
 import com.trunk.rx.json.path.ArrayIndexToken;
 import com.trunk.rx.json.path.JsonPath;
@@ -30,10 +31,15 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
+/**
+ * A streaming JSON parser based on Gson's
+ * <a href="https://github.com/google/gson/blob/master/gson/src/main/java/com/google/gson/stream/JsonReader.java">JsonReader</a>.
+ * (c) Google Inc
+ */
 public class JsonParser extends Subscriber<Character> {
   private static final Logger log = LoggerFactory.getLogger(JsonParser.class);
 
-  private static final char[] NON_EXECUTE_PREFIX = ")]}'\n".toCharArray();
+  private static final char[] NON_EXECUTE_PREFIX = JsonNonExecutablePrefix.PREFIX.toCharArray();
   private static final char BOM = '\uFEFF';
 
   private final boolean lenient;

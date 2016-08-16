@@ -54,6 +54,13 @@ public class RxJson {
   /**
    * @return a new immutable JsonArray with the given elements
    */
+  public static JsonArray newArray(JsonElement... values) {
+    return JsonArray.of(values);
+  }
+
+  /**
+   * @return a new immutable JsonArray with the given elements
+   */
   public static JsonArray newArray(Iterable<JsonElement> values) {
     return JsonArray.of(values);
   }
@@ -69,6 +76,13 @@ public class RxJson {
    * @return a new immutable JsonArray with the given entries
    */
   public static JsonObject newObject(Observable<JsonObject.Entry> values) {
+    return JsonObject.of(values);
+  }
+
+  /**
+   * @return a new immutable JsonArray with the given entries
+   */
+  public static JsonObject newObject(JsonObject.Entry... values) {
     return JsonObject.of(values);
   }
 
