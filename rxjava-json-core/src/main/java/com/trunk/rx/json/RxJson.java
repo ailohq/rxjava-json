@@ -40,56 +40,56 @@ public class RxJson {
   /**
    * @return a new empty, immutable JsonArray
    */
-  public static JsonArray newArray() {
+  public static <T extends JsonElement> JsonArray<T> newArray() {
     return JsonArray.of();
   }
 
   /**
    * @return a new immutable JsonArray with the given elements
    */
-  public static JsonArray newArray(Observable<JsonElement> values) {
+  public static <T extends JsonElement> JsonArray<T> newArray(Observable<T> values) {
     return JsonArray.of(values);
   }
 
   /**
    * @return a new immutable JsonArray with the given elements
    */
-  public static JsonArray newArray(JsonElement... values) {
+  public static <T extends JsonElement> JsonArray<T> newArray(T... values) {
     return JsonArray.of(values);
   }
 
   /**
    * @return a new immutable JsonArray with the given elements
    */
-  public static JsonArray newArray(Iterable<JsonElement> values) {
+  public static <T extends JsonElement> JsonArray<T> newArray(Iterable<T> values) {
     return JsonArray.of(values);
   }
 
   /**
    * @return a new empty, immutable JsonObject
    */
-  public static JsonObject newObject() {
+  public static <T extends JsonElement> JsonObject<T> newObject() {
     return JsonObject.of();
   }
 
   /**
    * @return a new immutable JsonArray with the given entries
    */
-  public static JsonObject newObject(Observable<JsonObject.Entry> values) {
+  public static <T extends JsonElement> JsonObject<T> newObject(Observable<JsonObject.Entry<T>> values) {
     return JsonObject.of(values);
   }
 
   /**
    * @return a new immutable JsonArray with the given entries
    */
-  public static JsonObject newObject(JsonObject.Entry... values) {
+  public static <T extends JsonElement> JsonObject<T> newObject(JsonObject.Entry<T>... values) {
     return JsonObject.of(values);
   }
 
   /**
    * @return a new immutable JsonArray with the given entries
    */
-  public static JsonObject newObject(Iterable<JsonObject.Entry> values) {
+  public static <T extends JsonElement> JsonObject<T> newObject(Iterable<JsonObject.Entry<T>> values) {
     return JsonObject.of(values);
   }
 
@@ -110,7 +110,7 @@ public class RxJson {
   /**
    * @return a transformer to convert JsonTokens to JSON as an Observable of Strings
    */
-  public static Observable.Transformer<? extends JsonToken, String> toJson() {
+  public static Observable.Transformer<JsonToken, String> toJson() {
     return TransformerJsonTokenToString.instance();
   }
 

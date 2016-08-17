@@ -1,0 +1,14 @@
+plugins {
+    id "com.jfrog.bintray" version "1.2"
+}
+
+description = 'HAL extensions for RxJava-JSON'
+
+dependencies {
+    compile project(':rxjava-json-core')
+
+    testCompile 'com.google.guava:guava:19.0'
+    testCompile group: 'io.reactivex', name: 'rxjava-string', version: '1.1.0'
+}
+
+apply from: '../bintray.gradle'

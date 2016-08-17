@@ -3,70 +3,73 @@ package com.trunk.rx.json.element;
 import com.trunk.rx.json.token.JsonColon;
 import com.trunk.rx.json.token.JsonComma;
 import com.trunk.rx.json.token.JsonName;
+import com.trunk.rx.json.token.JsonObjectEnd;
+import com.trunk.rx.json.token.JsonObjectStart;
+import com.trunk.rx.json.token.JsonQuote;
 import com.trunk.rx.json.token.JsonToken;
 import rx.Observable;
 
-public class JsonObject extends JsonElement {
+public class JsonObject<T extends JsonElement> extends JsonElement {
 
-  private final Observable<Entry> elements;
+  private final Observable<Entry<T>> elements;
 
-  public static JsonObject of() {
-    return new JsonObject(Observable.empty());
+  public static <T extends JsonElement> JsonObject<T> of() {
+    return new JsonObject<>(Observable.empty());
   }
 
-  public static JsonObject of(Observable<Entry> elements) {
-    return new JsonObject(elements);
+  public static <T extends JsonElement> JsonObject<T> of(Observable<Entry<T>> elements) {
+    return new JsonObject<>(elements);
   }
 
-  public static JsonObject of(Iterable<Entry> elements) {
-    return new JsonObject(Observable.from(elements));
+  public static <T extends JsonElement> JsonObject<T> of(Iterable<Entry<T>> elements) {
+    return new JsonObject<>(Observable.from(elements));
   }
 
-  public static JsonObject of(Entry... elements) {
-    return new JsonObject(Observable.from(elements));
+  public static <T extends JsonElement> JsonObject<T> of(Entry<T>... elements) {
+    return new JsonObject<>(Observable.from(elements));
   }
 
-  public static Entry entry(String key, JsonElement value) {
-    return new Entry(key, value);
+  public static <T extends JsonElement> Entry<T> entry(String key, T value) {
+    return new Entry<>(key, value);
   }
 
-  protected JsonObject(Observable<Entry> elements) {
+  protected JsonObject(Observable<Entry<T>> elements) {
     super(
-        Observable.<JsonToken>just(com.trunk.rx.json.token.JsonObject.start())
+        Observable.<JsonToken>just(JsonObjectStart.instance())
             .concatWith(
                 elements
                     .concatMap(
                         entry ->
                             Observable.<JsonToken>just(JsonComma.instance())
-                                .concatWith(Observable.just(JsonName.of(entry.getKey())))
+                                .concatWith(Observable.just(JsonQuote.instance(), JsonName.of(entry.getKey()), JsonQuote.instance()))
                                 .concatWith(Observable.just(JsonColon.instance()))
                                 .concatWith(entry.getValue())
                     )
                     .skip(1)
             )
-            .concatWith(Observable.just(com.trunk.rx.json.token.JsonObject.end()))
+            .concatWith(Observable.just(JsonObjectEnd.instance()))
     );
     this.elements = elements;
   }
 
-  public JsonObject addAll(Observable<? extends Entry> elements) {
-    return new JsonObject(this.elements.concatWith(elements));
+  public JsonObject<T> addAll(Observable<Entry<T>> elements) {
+    return new JsonObject<>(this.elements.concatWith(elements));
   }
 
-  public JsonObject addAll(Iterable<? extends Entry> elements) {
-    return new JsonObject(this.elements.concatWith(Observable.from(elements)));
+  public JsonObject<T> addAll(Iterable<Entry<T>> elements) {
+    return new JsonObject<>(this.elements.concatWith(Observable.from(elements)));
   }
 
-  public JsonObject add(String key, JsonElement value) {
-    return new JsonObject(this.elements.concatWith(Observable.just(entry(key, value))));
+  public JsonObject<T> add(String key, T value) {
+    return new JsonObject<>(this.elements.concatWith(Observable.just(entry(key, value))));
   }
 
-  public static class Entry {
+  public static final class Entry<T extends JsonElement> {
 
     private String key;
-    private JsonElement value;
+    private T value;
 
-    public Entry(String key, JsonElement value) {
+    public Entry(String key, T value) {
       this.key = key;
       this.value = value;
     }
@@ -75,7 +78,7 @@ public class JsonObject extends JsonElement {
       return key;
     }
 
-    public JsonElement getValue() {
+    public T getValue() {
       return value;
     }
   }

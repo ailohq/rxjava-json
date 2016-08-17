@@ -125,6 +125,30 @@ TBC maven/gradle
 
 A library to help building [HAL](http://stateless.co/hal_specification.html) objects in RxJavaJson.
 
+```java
+// {
+//   "_links": {
+//     "self": { "href": "/path", "title": "name" }, 
+//     "next": { "href": "/path?page=2", "title": "name - page 2" } 
+//   },
+//   "_embedded": {
+//     "child": [
+//       {},
+//       {}
+//     ]
+//   },
+//   "foo": "bar",
+//   "bar": "baz"
+// }
+
+HalObject.create()
+  .self(HalLink.create(Uri.create("/path")).title("name"))
+  .putLink("next", HalLink.create(Uri.create("/path?page=2")).title("name - page 2"))
+  .appendEmbedded("child", HalObject.create())
+  .appendEmbedded("child", HalObject.create())
+  .appendData("foo", JsonValueBuilder.instance().create("bar"))
+  .appendData(Observable.just(JsonObject.entry("bar", JsonValueBuilder.instance().create("baz")));
+```
 
 ## rxjava-json-gson
 

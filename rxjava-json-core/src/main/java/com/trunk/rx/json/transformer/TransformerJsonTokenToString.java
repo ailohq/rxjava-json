@@ -23,13 +23,12 @@ public class TransformerJsonTokenToString implements Observable.Transformer<Json
 
   private String escape(String value) {
     return value
+      .replace("\\", "\\\\")
       .replace("\"", "\\\"")
-      .replace("/", "\\/")
       .replace("\b", "\\b")
       .replace("\f", "\\f")
       .replace("\n", "\\n")
       .replace("\r", "\\r")
-      .replace("\t", "\\t")
-      .replace("\\", "\\\\");
+      .replace("\t", "\\t");
   }
 }

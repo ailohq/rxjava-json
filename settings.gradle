@@ -1,4 +1,5 @@
 rootProject.name = 'rxjava-json'
 include 'rxjava-json-core'
 include 'rxjava-json-gson'
+include 'rxjava-json-hal'
 
