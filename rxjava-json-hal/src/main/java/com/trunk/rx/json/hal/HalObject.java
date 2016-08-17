@@ -22,7 +22,7 @@ public class HalObject extends JsonElement {
   private static final String LINKS = "_links";
   private static final String EMBEDDED = "_embedded";
   private static final String DATA_CANNOT_USE_RESERVED_PROPERTY = "Data cannot use reserved property '%s'";
-  private static final String LINK_SELF_CAN_ONLY_BE_SET_USING_SELF = "Link 'self' can only be set using #self";
+  private static final String LINK_SELF_CAN_ONLY_BE_SET_USING_SELF = "Rel 'self' can only be set using #self";
   private static final HalObject EMPTY_HAL_OBJECT = new HalObject(Optional.empty(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Observable.empty(), false);
 
   private final Optional<HalLink> self;
@@ -47,53 +47,69 @@ public class HalObject extends JsonElement {
                     Map<String, Observable<HalObject>> arrayEmbedded,
                     Observable<JsonObject.Entry<JsonElement>> data,
                     boolean lenient) {
+    // this mess is to avoid empty objects in _links and _embedded
     super(
-      JsonObject.of().add(
-        LINKS,
-        JsonObject.of(
-          self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(SELF, s))).orElse(Observable.empty())
-            .concatWith(
-              Observable.from(singletonLinks.entrySet())
-                .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
-                .concatWith(
-                  Observable.from(arrayLinks.entrySet())
-                    .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
-                )
-                .flatMap(e -> {
-                  if (e.getKey().equals(SELF)) {
-                    if (lenient) {
-                      return Observable.empty();
-                    }
-                    return Observable.error(new HalKeyException(LINK_SELF_CAN_ONLY_BE_SET_USING_SELF));
-                  }
-                  return Observable.just(e);
-                })
+      JsonObject.of(
+        (
+          self.isPresent() || !singletonLinks.isEmpty() || !arrayLinks.isEmpty() ?
+          Observable.<JsonObject.Entry<JsonElement>>just(
+            JsonObject.entry(
+              LINKS,
+              JsonObject.of(
+                self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(SELF, s))).orElse(Observable.empty())
+                  .concatWith(
+                    Observable.from(singletonLinks.entrySet())
+                      .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
+                      .concatWith(
+                        Observable.from(arrayLinks.entrySet())
+                          .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
+                      )
+                      .flatMap(e -> {
+                        if (e.getKey().equals(SELF)) {
+                          if (lenient) {
+                            return Observable.empty();
+                          }
+                          return Observable.error(new HalKeyException(LINK_SELF_CAN_ONLY_BE_SET_USING_SELF));
+                        }
+                        return Observable.just(e);
+                      })
+                  )
+              )
             )
+          ) :
+          Observable.<JsonObject.Entry<JsonElement>>empty()
         )
-      )
-      .add(
-        EMBEDDED,
-        JsonObject.of(
-          Observable.from(singletonEmbedded.entrySet())
-            .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
-            .concatWith(
-              Observable.from(arrayEmbedded.entrySet())
-                .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
+        .concatWith(
+          !singletonEmbedded.isEmpty() || !arrayEmbedded.isEmpty() ?
+          Observable.just(
+            JsonObject.entry(
+              EMBEDDED,
+              JsonObject.of(
+                Observable.from(singletonEmbedded.entrySet())
+                  .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
+                  .concatWith(
+                    Observable.from(arrayEmbedded.entrySet())
+                      .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
+                  )
+              )
             )
+          ) :
+          Observable.empty()
         )
-      )
-      .addAll(
-        data.flatMap(e -> {
-          if (e.getKey().equals(LINKS) || e.getKey().equals(EMBEDDED)) {
-            if (lenient) {
-              return Observable.empty();
+        .concatWith(
+          data.flatMap(e -> {
+            if (e.getKey().equals(LINKS) || e.getKey().equals(EMBEDDED)) {
+              if (lenient) {
+                return Observable.empty();
+              }
+              return Observable.error(new HalKeyException(String.format(DATA_CANNOT_USE_RESERVED_PROPERTY, e.getKey())));
             }
-            return Observable.error(new HalKeyException(String.format(DATA_CANNOT_USE_RESERVED_PROPERTY, e.getKey())));
-          }
-          return Observable.just(e);
-        })
+            return Observable.just(e);
+          })
+        )
       )
     );
+
     this.self = self;
     this.singletonLinks = Collections.unmodifiableMap(singletonLinks);
     this.arrayLinks = Collections.unmodifiableMap(arrayLinks);
@@ -123,6 +139,8 @@ public class HalObject extends JsonElement {
   }
 
   /**
+   * Set the self rel. This means people can't accidentally specify an array of self rels.
+   *
    * @param self the self link
    * @return a new HalObject with the self link set to the given value
    */

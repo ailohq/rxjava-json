@@ -104,13 +104,9 @@ public class HalLinkTest {
   private void assertEquals(Observable<JsonToken> in, String out) {
     TestSubscriber<String> ts = new TestSubscriber<>();
 
-    in.compose(toJson).subscribe(ts);
+    in.compose(RxJson.toJson()).compose(StringObservable::stringConcat).subscribe(ts);
 
     ts.assertCompleted();
     ts.assertValue(out);
-
   } 
-  
-  private Observable.Transformer<JsonToken, String> toJson = stringObservable -> StringObservable.stringConcat(stringObservable.compose(RxJson.toJson()));
-
 }

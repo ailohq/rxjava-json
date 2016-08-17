@@ -12,6 +12,8 @@ import java.lang.reflect.Type;
  */
 public class GsonJsonElementBuilder {
 
+  public static final GsonJsonElementBuilder DEFAULT = new GsonJsonElementBuilder();
+
   private final Gson gson;
 
   public GsonJsonElementBuilder() {

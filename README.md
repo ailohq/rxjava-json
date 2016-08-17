@@ -160,14 +160,6 @@ TBC maven/gradle
 By default is uses the default Gson configuration and unmarshalls to an `Object`.
 
 
-```java
-```
-
-### Writing
-
-`GsonJsonElementBuilder` produces `Observable<JsonToken>` using Gson. It
-can use either the default or a custom Gson.
-
 ```
 // our source JSON document
 Observable<String> source = ...;
@@ -205,6 +197,17 @@ Observable<HalObject> o1 = source.compose(
         return gson.fromJson(jsonElement, Embedded.class);
     }
 );
+```
+
+### Writing
+
+`GsonJsonElementBuilder` produces `Observable<JsonToken>` using Gson. It
+can use either the default or a custom Gson.
+
+```
+Observable<?> source = ...;
+
+RxJson.newArray(source.compose(RxJsonGson.toJsonElements()));
 ```
 
 

@@ -1,7 +1,10 @@
 package com.trunk.rx.json.gson;
 
+import com.trunk.rx.json.element.JsonElement;
+import com.trunk.rx.json.gson.transformer.TransformerObjectToJsonElement;
 import com.trunk.rx.json.gson.transformer.TransformerRxJsonGson;
 import com.trunk.rx.json.path.JsonPath;
+import rx.Observable;
 
 /**
  * An adpater for {@link com.trunk.rx.json.RxJson} to return Java objects from  a JSON stream using <a href="https://github.com/google/gson">Gson</a>.
@@ -28,4 +31,10 @@ public class RxJsonGson {
     return TransformerRxJsonGson.from(paths);
   }
 
+  /**
+   * Transform an Observable of objects to an observable of JsonElements
+   */
+  public static Observable.Transformer<Object, JsonElement> toJsonElements() {
+    return TransformerObjectToJsonElement.instance();
+  }
 }
