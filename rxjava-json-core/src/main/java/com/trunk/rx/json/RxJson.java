@@ -94,6 +94,13 @@ public class RxJson {
   }
 
   /**
+   * @return a new immutable JsonEntry to insert into a JsonObject
+   */
+  public static <T extends JsonElement> JsonObject.Entry<T> newEntry(String key, T value) {
+    return JsonObject.entry(key, value);
+  }
+
+  /**
    * @return a new immutable JsonRaw
    */
   public static JsonRaw newRaw(String value) {

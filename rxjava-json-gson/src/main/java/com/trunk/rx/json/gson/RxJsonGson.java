@@ -1,6 +1,8 @@
 package com.trunk.rx.json.gson;
 
+import com.google.gson.Gson;
 import com.trunk.rx.json.element.JsonElement;
+import com.trunk.rx.json.element.JsonRaw;
 import com.trunk.rx.json.gson.transformer.TransformerObjectToJsonElement;
 import com.trunk.rx.json.gson.transformer.TransformerRxJsonGson;
 import com.trunk.rx.json.path.JsonPath;
@@ -36,5 +38,19 @@ public class RxJsonGson {
    */
   public static Observable.Transformer<Object, JsonElement> toJsonElements() {
     return TransformerObjectToJsonElement.instance();
+  }
+
+  /**
+   * @return the default GsonJsonElementBuilder
+   */
+  public static GsonJsonElementBuilder elementBuilder() {
+    return GsonJsonElementBuilder.DEFAULT;
+  }
+
+  /**
+   * @return a GsonJsonElementBuilder using the given Gson
+   */
+  public static GsonJsonElementBuilder elementBuilder(Gson gson) {
+    return new GsonJsonElementBuilder(gson);
   }
 }
