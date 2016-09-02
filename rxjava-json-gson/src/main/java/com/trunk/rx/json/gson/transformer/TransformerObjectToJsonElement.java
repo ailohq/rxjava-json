@@ -11,13 +11,15 @@ import java.lang.reflect.Type;
  * An immutable transformer to produce JsonElements from objects
  */
 public class TransformerObjectToJsonElement implements Observable.Transformer<Object, JsonElement> {
-  private static final TransformerObjectToJsonElement INSTANCE = new TransformerObjectToJsonElement(GsonJsonElementBuilder.DEFAULT, null);
+  private static final class Holder {
+    private static final TransformerObjectToJsonElement INSTANCE = new TransformerObjectToJsonElement(GsonJsonElementBuilder.Holder.DEFAULT, null);
+  }
 
   private final GsonJsonElementBuilder gsonJsonElementBuilder;
   private final Type type;
 
   public static TransformerObjectToJsonElement instance() {
-    return INSTANCE;
+    return Holder.INSTANCE;
   }
 
   private TransformerObjectToJsonElement(GsonJsonElementBuilder gsonJsonElementBuilder, Type type) {

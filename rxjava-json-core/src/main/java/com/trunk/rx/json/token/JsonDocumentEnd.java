@@ -2,10 +2,12 @@ package com.trunk.rx.json.token;
 
 public class JsonDocumentEnd extends BaseToken {
 
-  private static final JsonDocumentEnd INSTANCE = new JsonDocumentEnd();
+  private static final class Holder {
+    private static final JsonDocumentEnd INSTANCE = new JsonDocumentEnd();
+  }
 
   public static JsonDocumentEnd instance() {
-    return INSTANCE;
+    return Holder.INSTANCE;
   }
 
   private JsonDocumentEnd() {

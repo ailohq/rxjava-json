@@ -28,7 +28,9 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class OperatorJsonGson implements Observable.Operator<GsonPathEvent, JsonPathEvent> {
 
-  private static final Gson GSON = TransformerRxJsonGson.DEFAULT_GSON;
+  private static final class Holder {
+    private static final Gson GSON = TransformerRxJsonGson.Holder.DEFAULT_GSON;
+  }
 
   @Override
   public Subscriber<? super JsonPathEvent> call(Subscriber<? super GsonPathEvent> s) {
@@ -262,7 +264,7 @@ public class OperatorJsonGson implements Observable.Operator<GsonPathEvent, Json
     }
 
     private Number asNumber(String value) {
-      return GSON.fromJson(value, Number.class);
+      return Holder.GSON.fromJson(value, Number.class);
     }
 
     private boolean handlePrimitive(JsonPathEvent event, JsonElement value) {

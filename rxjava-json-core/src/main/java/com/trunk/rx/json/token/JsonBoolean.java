@@ -5,19 +5,21 @@ import java.util.Objects;
 public class JsonBoolean extends BaseToken {
   private final String value;
 
-  private static JsonBoolean TRUE = new JsonBoolean("true");
-  private static JsonBoolean FALSE = new JsonBoolean("false");
+  private static final class Holder {
+    private static JsonBoolean TRUE = new JsonBoolean("true");
+    private static JsonBoolean FALSE = new JsonBoolean("false");
+  }
 
   public static JsonBoolean True() {
-    return TRUE;
+    return Holder.TRUE;
   }
 
   public static JsonBoolean False() {
-    return FALSE;
+    return Holder.FALSE;
   }
 
   public static JsonBoolean of(boolean b) {
-    return b ? TRUE : FALSE;
+    return b ? Holder.TRUE : Holder.FALSE;
   }
 
   private JsonBoolean(String value) {

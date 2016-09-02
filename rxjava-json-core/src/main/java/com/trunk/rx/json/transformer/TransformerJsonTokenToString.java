@@ -5,10 +5,12 @@ import rx.Observable;
 
 public class TransformerJsonTokenToString implements Observable.Transformer<JsonToken, String> {
 
-  private static final TransformerJsonTokenToString INSTANCE = new TransformerJsonTokenToString();
+  private static final class Holder {
+    private static final TransformerJsonTokenToString INSTANCE = new TransformerJsonTokenToString();
+  }
 
   public static TransformerJsonTokenToString instance() {
-    return INSTANCE;
+    return Holder.INSTANCE;
   }
 
   @Override

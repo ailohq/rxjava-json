@@ -16,7 +16,9 @@ import java.lang.reflect.Type;
  * based on the <a href="https://github.com/google/gson">Gson</a> stream parser. This will not unmarshall JSON using Gson.
  */
 public class TransformerRxJsonGson<T> implements Observable.Transformer<String, T> {
-  public static final Gson DEFAULT_GSON = new Gson();
+  public static final class Holder {
+    public static final Gson DEFAULT_GSON = new Gson();
+  }
   private static final Func3<JsonPath, JsonElement, Gson, Object> OBJECT_CONVERTER = (path, element, gson) -> gson.fromJson(element, Object.class);
 
   private final TransformerRxJson transformerRxJson;
@@ -103,14 +105,14 @@ public class TransformerRxJsonGson<T> implements Observable.Transformer<String, 
   public static TransformerRxJsonGson<Object> from(String... paths) {
     return new TransformerRxJsonGson<>(RxJson.parse(paths),
                                        new OperatorJsonGson(),
-                                       DEFAULT_GSON,
+                                       Holder.DEFAULT_GSON,
                                        OBJECT_CONVERTER);
   }
 
   public static TransformerRxJsonGson<Object> from(JsonPath... paths) {
     return new TransformerRxJsonGson<>(RxJson.parse(paths),
                                        new OperatorJsonGson(),
-                                       DEFAULT_GSON,
+                                       Holder.DEFAULT_GSON,
                                        OBJECT_CONVERTER);
   }
 }

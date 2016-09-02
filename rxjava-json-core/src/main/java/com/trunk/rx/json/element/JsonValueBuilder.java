@@ -15,15 +15,17 @@ import java.util.concurrent.atomic.DoubleAdder;
 
 public class JsonValueBuilder {
 
-  private static final long MAX_SAFE_INTEGER = 9007199254740991L;
-  private static final long MIN_SAFE_INTEGER = -9007199254740991L;
-  private static final BigInteger MAX_SAFE_BIG_INTEGER = BigInteger.valueOf(MAX_SAFE_INTEGER);
-  private static final BigInteger MIN_SAFE_BIG_INTEGER = BigInteger.valueOf(MIN_SAFE_INTEGER);
-  private static final BigInteger MAX_SAFE_MANTISSA = BigInteger.valueOf(MAX_SAFE_INTEGER);
-  private static final int MAX_SAFE_EXPONENT = 1023;
-  private static final int MIN_SAFE_EXPONENT = -1022;
-  private static final JsonValueBuilder INSTANCE = new JsonValueBuilder();
-  public static final JsonElement NULL_ELEMENT = new JsonElement(JsonNull.instance());
+  private static final class Holder {
+    private static final long MAX_SAFE_INTEGER = 9007199254740991L;
+    private static final long MIN_SAFE_INTEGER = -9007199254740991L;
+    private static final BigInteger MAX_SAFE_BIG_INTEGER = BigInteger.valueOf(MAX_SAFE_INTEGER);
+    private static final BigInteger MIN_SAFE_BIG_INTEGER = BigInteger.valueOf(MIN_SAFE_INTEGER);
+    private static final BigInteger MAX_SAFE_MANTISSA = BigInteger.valueOf(MAX_SAFE_INTEGER);
+    private static final int MAX_SAFE_EXPONENT = 1023;
+    private static final int MIN_SAFE_EXPONENT = -1022;
+    private static final JsonValueBuilder INSTANCE = new JsonValueBuilder();
+    private static final JsonElement NULL_ELEMENT = new JsonElement(JsonNull.instance());
+  }
 
   private final boolean lenient;
   private final boolean quoteLargeNumbers;
@@ -36,19 +38,19 @@ public class JsonValueBuilder {
     } else if (value instanceof BigDecimal) {
       BigDecimal decimal = (BigDecimal) value;
       int exp = decimal.precision() - decimal.scale() - 1;
-      return decimal.unscaledValue().compareTo(MAX_SAFE_MANTISSA) > 0 || exp > MAX_SAFE_EXPONENT || exp < MIN_SAFE_EXPONENT;
+      return decimal.unscaledValue().compareTo(Holder.MAX_SAFE_MANTISSA) > 0 || exp > Holder.MAX_SAFE_EXPONENT || exp < Holder.MIN_SAFE_EXPONENT;
     } else if (value instanceof BigInteger) {
-      return ((BigInteger) value).compareTo(MAX_SAFE_BIG_INTEGER) > 0 || ((BigInteger) value).compareTo(MIN_SAFE_BIG_INTEGER) < 0;
+      return ((BigInteger) value).compareTo(Holder.MAX_SAFE_BIG_INTEGER) > 0 || ((BigInteger) value).compareTo(Holder.MIN_SAFE_BIG_INTEGER) < 0;
     } else {
-      return value.longValue() > MAX_SAFE_INTEGER || value.longValue() < MIN_SAFE_INTEGER;
+      return value.longValue() > Holder.MAX_SAFE_INTEGER || value.longValue() < Holder.MIN_SAFE_INTEGER;
     }
   }
 
   public static JsonValueBuilder instance() {
-    return INSTANCE;
+    return Holder.INSTANCE;
   }
 
-  public JsonValueBuilder() {
+  private JsonValueBuilder() {
     this(false, false, false);
   }
 
@@ -169,7 +171,7 @@ public class JsonValueBuilder {
    * The null value.
    */
   public JsonElement Null() {
-    return NULL_ELEMENT;
+    return Holder.NULL_ELEMENT;
   }
 
   private boolean isInfiniteOrNotANumber(Number value) {

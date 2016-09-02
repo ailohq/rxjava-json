@@ -18,12 +18,14 @@ import java.util.Optional;
  */
 public class HalObject extends JsonElement {
 
-  private static final String SELF = "self";
-  private static final String LINKS = "_links";
-  private static final String EMBEDDED = "_embedded";
-  private static final String DATA_CANNOT_USE_RESERVED_PROPERTY = "Data cannot use reserved property '%s'";
-  private static final String LINK_SELF_CAN_ONLY_BE_SET_USING_SELF = "Rel 'self' can only be set using #self";
-  private static final HalObject EMPTY_HAL_OBJECT = new HalObject(Optional.empty(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Observable.empty(), false);
+  private static final class Holder {
+    private static final String SELF = "self";
+    private static final String LINKS = "_links";
+    private static final String EMBEDDED = "_embedded";
+    private static final String DATA_CANNOT_USE_RESERVED_PROPERTY = "Data cannot use reserved property '%s'";
+    private static final String LINK_SELF_CAN_ONLY_BE_SET_USING_SELF = "Rel 'self' can only be set using #self";
+    private static final HalObject EMPTY_HAL_OBJECT = new HalObject(Optional.empty(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Observable.empty(), false);
+  }
 
   private final Optional<HalLink> self;
   private final Map<String, HalLink> singletonLinks;
@@ -37,7 +39,7 @@ public class HalObject extends JsonElement {
    * @return an immutable empty HalObject
    */
   public static HalObject create() {
-    return EMPTY_HAL_OBJECT;
+    return Holder.EMPTY_HAL_OBJECT;
   }
 
   private HalObject(Optional<HalLink> self,
@@ -54,9 +56,9 @@ public class HalObject extends JsonElement {
           self.isPresent() || !singletonLinks.isEmpty() || !arrayLinks.isEmpty() ?
           Observable.<JsonObject.Entry<JsonElement>>just(
             JsonObject.entry(
-              LINKS,
+              Holder.LINKS,
               JsonObject.of(
-                self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(SELF, s))).orElse(Observable.empty())
+                self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(Holder.SELF, s))).orElse(Observable.empty())
                   .concatWith(
                     Observable.from(singletonLinks.entrySet())
                       .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
@@ -65,11 +67,11 @@ public class HalObject extends JsonElement {
                           .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
                       )
                       .flatMap(e -> {
-                        if (e.getKey().equals(SELF)) {
+                        if (e.getKey().equals(Holder.SELF)) {
                           if (lenient) {
                             return Observable.empty();
                           }
-                          return Observable.error(new HalKeyException(LINK_SELF_CAN_ONLY_BE_SET_USING_SELF));
+                          return Observable.error(new HalKeyException(Holder.LINK_SELF_CAN_ONLY_BE_SET_USING_SELF));
                         }
                         return Observable.just(e);
                       })
@@ -83,7 +85,7 @@ public class HalObject extends JsonElement {
           !singletonEmbedded.isEmpty() || !arrayEmbedded.isEmpty() ?
           Observable.just(
             JsonObject.entry(
-              EMBEDDED,
+              Holder.EMBEDDED,
               JsonObject.of(
                 Observable.from(singletonEmbedded.entrySet())
                   .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
@@ -98,11 +100,11 @@ public class HalObject extends JsonElement {
         )
         .concatWith(
           data.flatMap(e -> {
-            if (e.getKey().equals(LINKS) || e.getKey().equals(EMBEDDED)) {
+            if (e.getKey().equals(Holder.LINKS) || e.getKey().equals(Holder.EMBEDDED)) {
               if (lenient) {
                 return Observable.empty();
               }
-              return Observable.error(new HalKeyException(String.format(DATA_CANNOT_USE_RESERVED_PROPERTY, e.getKey())));
+              return Observable.error(new HalKeyException(String.format(Holder.DATA_CANNOT_USE_RESERVED_PROPERTY, e.getKey())));
             }
             return Observable.just(e);
           })
@@ -487,14 +489,14 @@ public class HalObject extends JsonElement {
   }
 
   private void requireRelNotSelf(String rel) {
-    if (SELF.equals(rel)) {
-      throw new HalKeyException(LINK_SELF_CAN_ONLY_BE_SET_USING_SELF);
+    if (Holder.SELF.equals(rel)) {
+      throw new HalKeyException(Holder.LINK_SELF_CAN_ONLY_BE_SET_USING_SELF);
     }
   }
 
   private void requireKeyNotReserved(String key) {
-    if (LINKS.equals(key) || EMBEDDED.equals(key)) {
-      throw new HalKeyException(String.format(DATA_CANNOT_USE_RESERVED_PROPERTY, key));
+    if (Holder.LINKS.equals(key) || Holder.EMBEDDED.equals(key)) {
+      throw new HalKeyException(String.format(Holder.DATA_CANNOT_USE_RESERVED_PROPERTY, key));
     }
   }
 }

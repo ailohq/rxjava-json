@@ -44,7 +44,7 @@ public class RxJsonGson {
    * @return the default GsonJsonElementBuilder
    */
   public static GsonJsonElementBuilder elementBuilder() {
-    return GsonJsonElementBuilder.DEFAULT;
+    return GsonJsonElementBuilder.Holder.DEFAULT;
   }
 
   /**

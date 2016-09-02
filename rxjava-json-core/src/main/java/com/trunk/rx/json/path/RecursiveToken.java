@@ -6,10 +6,12 @@ import java.util.Optional;
 
 public class RecursiveToken extends JsonPath {
 
-  private static RecursiveToken INSTANCE = new RecursiveToken();
+  private static final class Holder {
+    private static RecursiveToken INSTANCE = new RecursiveToken();
+  }
 
   public static RecursiveToken instance() {
-    return INSTANCE;
+    return Holder.INSTANCE;
   }
 
   private RecursiveToken() {
