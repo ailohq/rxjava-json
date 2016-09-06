@@ -333,4 +333,30 @@ public class TransformerJsonPathTest {
 
     ts.assertCompleted();
   }
+
+  @Test
+  public void shouldBeAbleToReuse() throws Exception {
+    TestSubscriber<String> ts = new TestSubscriber<>();
+
+    TransformerJsonPath transformerJsonPath = TransformerJsonPath.from(JsonPath.parse("$.a.b.*"));
+
+    Observable.just("{\"a\":{\"b\":[1,2,3,4,5,6]}}")
+      .lift(CharacterObservable.toCharacter())
+      .lift(STRICT_PARSER)
+      .compose(transformerJsonPath)
+      .map(e -> e.getTokenEvent().getToken())
+      .subscribe();
+
+    Observable.just("{\"a\":{\"b\":[1,2,3,4,5,6]}}")
+      .lift(CharacterObservable.toCharacter())
+      .lift(STRICT_PARSER)
+      .compose(transformerJsonPath)
+      .map(e -> e.getTokenEvent().getToken().value())
+      .subscribe(ts);
+
+    ts.assertNoErrors();
+    ts.assertCompleted();
+    ts.assertValues("1","2","3","4","5","6");
+
+  }
 }

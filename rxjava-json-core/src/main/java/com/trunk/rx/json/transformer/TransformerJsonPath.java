@@ -9,20 +9,18 @@ import rx.Observable;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class TransformerJsonPath implements Observable.Transformer<JsonTokenEvent, JsonPathEvent> {
 
-  private final Observable<JsonPath> matchers;
+  private final Collection<JsonPath> matchers;
   private final boolean lenient;
 
-  private final ConcurrentHashMap<JsonPath, Integer> visitedMatchers = new ConcurrentHashMap<>();
-  private final ConcurrentHashMap<JsonPath, Integer> completedMatchers = new ConcurrentHashMap<>();
-
   public static TransformerJsonPath from(String... paths) {
-    return from(Arrays.asList(paths).stream().map(s -> JsonPath.parse(s)).collect(Collectors.toList()));
+    return from(Arrays.stream(paths).map(s -> JsonPath.parse(s)).collect(Collectors.toList()));
   }
 
   public static TransformerJsonPath from(JsonPath... matchers) {
@@ -33,26 +31,29 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
     if (matchers.isEmpty()) {
       throw new IllegalArgumentException("One or more JsonPaths must be supplied");
     }
-    return new TransformerJsonPath(Observable.from(matchers), false);
+    return new TransformerJsonPath(matchers, false);
   }
 
-  public TransformerJsonPath(Observable<JsonPath> matchers, boolean lenient) {
+  public TransformerJsonPath(Collection<JsonPath> matchers, boolean lenient) {
     this.lenient = lenient;
-    this.matchers = matchers;
-    matchers.toBlocking().forEach(jsonPath -> {
-      visitedMatchers.put(jsonPath, 0);
-      completedMatchers.put(jsonPath, 0);
-    });
+    this.matchers =  matchers;
   }
 
 
   @Override
   public Observable<JsonPathEvent> call(Observable<JsonTokenEvent> upstream) {
+    ConcurrentHashMap<JsonPath, Integer> visitedMatchers = new ConcurrentHashMap<>();
+    ConcurrentHashMap<JsonPath, Integer> completedMatchers = new ConcurrentHashMap<>();
+    matchers.forEach(jsonPath -> {
+      visitedMatchers.put(jsonPath, 0);
+      completedMatchers.put(jsonPath, 0);
+    });
+
     return upstream
-      .takeUntil(ignore -> !lenient && allMatchersComplete())
+      .takeUntil(ignore -> !lenient && allMatchersComplete(visitedMatchers, completedMatchers))
       .concatMap( // order is important
         jsonTokenEvent ->
-          matches(jsonTokenEvent)
+          matches(jsonTokenEvent, visitedMatchers, completedMatchers)
             .concatWith(
               jsonTokenEvent.getToken() == JsonDocumentEnd.instance() ?
                 Observable.just(new JsonPathEvent(NoopToken.instance(), jsonTokenEvent)) :
@@ -65,7 +66,7 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
     return new TransformerJsonPath(matchers, false);
   }
 
-  private boolean allMatchersComplete() {
+  private boolean allMatchersComplete(Map<JsonPath, Integer> visitedMatchers, Map<JsonPath, Integer> completedMatchers) {
     for (Entry<JsonPath, Integer> p : visitedMatchers.entrySet()) {
       if (p.getValue() == 0 || completedMatchers.get(p.getKey()) == 0) {
         return false;
@@ -78,8 +79,8 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
     return new TransformerJsonPath(matchers, true);
   }
 
-  private Observable<JsonPathEvent> matches(JsonTokenEvent jsonTokenEvent) {
-    return matchers
+  private Observable<JsonPathEvent> matches(JsonTokenEvent jsonTokenEvent, Map<JsonPath, Integer> visitedMatchers, Map<JsonPath, Integer> completedMatchers) {
+    return Observable.from(matchers)
       .flatMap(matcher -> matcher.match(jsonTokenEvent.getJsonPath()).map(matched -> new MatchWrapper(matcher, matched)))
       .doOnNext(wrapper -> {
         // mark visited matches (ie gave any result)
