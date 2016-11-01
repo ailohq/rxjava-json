@@ -31,7 +31,7 @@ public class HalLinkTest {
   @Test
   public void shouldAcceptType() throws Exception {
     assertEquals(
-        HalLink.create(URI.create("/test")).type("text/*"),
+        HalLink.create("/test").type("text/*"),
         "{\"href\":\"/test\",\"type\":\"text/*\"}"
     );
   }

@@ -29,6 +29,10 @@ public class HalLink extends JsonElement {
     return new HalLink(Optional.empty(), href, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
   }
 
+  public static HalLink create(String href) {
+    return create(URI.create(href));
+  }
+
   protected HalLink(Optional<String> name, URI href, Optional<Boolean> templated, Optional<String> type, Optional<String> deprecation, Optional<URI> profile, Optional<Locale> hreflang, Optional<String> title) {
     super(
       JsonObject.of(
