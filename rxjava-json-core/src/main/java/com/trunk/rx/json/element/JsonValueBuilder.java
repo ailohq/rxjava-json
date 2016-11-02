@@ -116,6 +116,9 @@ public class JsonValueBuilder {
    * A single JSON string.
    */
   public JsonElement create(String value) {
+    if (value == null) {
+      return Null();
+    }
     return new JsonElement(Observable.just(JsonQuote.instance(), JsonString.of(value), JsonQuote.instance()));
   }
 
@@ -145,6 +148,9 @@ public class JsonValueBuilder {
    * A single JSON number.
    */
   public JsonElement create(Number value) {
+    if (value == null) {
+      return Null();
+    }
     boolean infiniteOrNotANumber = isInfiniteOrNotANumber(value);
     if (quoteInfiniteAndNaN && infiniteOrNotANumber) {
       return create(value.toString());
@@ -164,6 +170,9 @@ public class JsonValueBuilder {
    * @return a single JSON number
    */
   public JsonElement createNumberFromString(String numericValue) {
+    if (numericValue == null) {
+      return Null();
+    }
     return new JsonElement(JsonNumber.of(numericValue));
   }
 

@@ -21,6 +21,11 @@ public class RootToken extends JsonPath {
   }
 
   @Override
+  public boolean isWildcard() {
+    return false;
+  }
+
+  @Override
   int tokenHash() {
     return Objects.hashCode("<root>");
   }
@@ -48,7 +53,7 @@ public class RootToken extends JsonPath {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean tokenEquals(JsonPath jsonPath) {
     return jsonPath instanceof RootToken;
   }
 }

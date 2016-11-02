@@ -23,6 +23,11 @@ public class NoopToken extends JsonPath {
   }
 
   @Override
+  public boolean isWildcard() {
+    return false;
+  }
+
+  @Override
   int tokenHash() {
     return 0;
   }
@@ -48,7 +53,7 @@ public class NoopToken extends JsonPath {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean tokenEquals(JsonPath jsonPath) {
     return false;
   }
 }

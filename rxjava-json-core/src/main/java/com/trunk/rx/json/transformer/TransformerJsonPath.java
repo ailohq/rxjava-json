@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -93,11 +94,32 @@ public class TransformerJsonPath implements Observable.Transformer<JsonTokenEven
       .doOnNext(t -> {
         // if we got no result, any visited matchers are complete
         if (!lenient && t == NoopToken.instance()) {
-          visitedMatchers.entrySet().stream().filter(p -> p.getValue() == 1).forEach(p -> completedMatchers.put(p.getKey(), 1));
+          visitedMatchers.entrySet().stream()
+            .filter(p -> p.getValue() == 1)
+            .filter(p -> !matchesNonWildcardRoot(p.getKey(), jsonTokenEvent.getJsonPath()))
+            .forEach(p -> completedMatchers.put(p.getKey(), 1));
         }
       })
       .filter(t -> t != NoopToken.instance())
       .map(shortestMatchedPath -> new JsonPathEvent(shortestMatchedPath, jsonTokenEvent));
+  }
+
+  private boolean matchesNonWildcardRoot(JsonPath matcherPath, JsonPath tokenPath) {
+    Optional<JsonPath> m = Optional.of(matcherPath);
+    Optional<JsonPath> t = Optional.of(tokenPath);
+    while(m.isPresent() && m.get().length() > 0 && t.isPresent() && t.get().length() > 0) {
+      if (m.get().isWildcard()) {
+        return true;
+      }
+      if (!m.get().tokenEquals(t.get())) {
+        return false;
+      }
+      m = m.get().getNextPathToken();
+      t = t.get().getNextPathToken();
+    }
+    return (t.isPresent() && t.get().length() > 0) ||
+      (m.isPresent() && m.get().isWildcard()) ||
+      (!m.isPresent() && !t.isPresent());
   }
 
   private class MatchWrapper {

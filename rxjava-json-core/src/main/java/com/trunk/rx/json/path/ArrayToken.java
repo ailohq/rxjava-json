@@ -35,6 +35,11 @@ public abstract class ArrayToken extends JsonPath {
       .flatMap(p -> matchNextFragment(p, matchedFragments));
   }
 
+  @Override
+  public boolean isWildcard() {
+    return false;
+  }
+
   abstract boolean doesMatch(JsonPath pathToTest);
 
   abstract String arrayValue();

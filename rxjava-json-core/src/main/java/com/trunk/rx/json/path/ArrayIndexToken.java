@@ -45,7 +45,7 @@ public class ArrayIndexToken extends ArrayToken {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean tokenEquals(JsonPath jsonPath) {
     return jsonPath instanceof ArrayIndexToken && ((ArrayIndexToken) jsonPath).index == index;
   }
 }

@@ -61,7 +61,7 @@ public class ArrayStepToken extends ArrayToken {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean tokenEquals(JsonPath jsonPath) {
     return jsonPath instanceof ArrayStepToken &&
       ((ArrayStepToken) jsonPath).start == start &&
       ((ArrayStepToken) jsonPath).end == end &&

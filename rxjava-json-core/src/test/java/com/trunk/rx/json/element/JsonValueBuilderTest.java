@@ -169,6 +169,24 @@ public class JsonValueBuilderTest {
   }
 
   @Test
+  public void shouldIgnoreNulls() throws Exception {
+    TestSubscriber<JsonToken> ts = new TestSubscriber<>();
+    String s = null;
+    Number n = null;
+    JSON_VALUE_BUILDER.create(s)
+      .concatWith(JSON_VALUE_BUILDER.create(n))
+      .concatWith(JSON_VALUE_BUILDER.createNumberFromString(s))
+      .subscribe(ts);
+    ts.assertNoErrors();
+    ts.assertCompleted();
+    ts.assertValues(
+      JsonNull.instance(),
+      JsonNull.instance(),
+      JsonNull.instance()
+    );
+  }
+
+  @Test
   public void shouldNotQuoteMaxDouble() throws Exception {
 
   }

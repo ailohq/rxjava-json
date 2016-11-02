@@ -23,6 +23,11 @@ public class RecursiveToken extends JsonPath {
   }
 
   @Override
+  public boolean isWildcard() {
+    return true;
+  }
+
+  @Override
   int tokenHash() {
     return Objects.hashCode("<recursive>");
   }
@@ -66,7 +71,7 @@ public class RecursiveToken extends JsonPath {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean tokenEquals(JsonPath jsonPath) {
     return jsonPath instanceof RecursiveToken;
   }
 }
