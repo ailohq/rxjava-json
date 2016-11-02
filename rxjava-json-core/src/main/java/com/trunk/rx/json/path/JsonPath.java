@@ -49,15 +49,15 @@ public abstract class JsonPath implements Cloneable {
 
   public Observable<JsonPath> match(JsonPath pathToTest) {
     return doMatch(Optional.of(pathToTest), Collections.emptyList())
-      .map(m -> Observable.just(m))
+      .map(Observable::just)
       .orElse(Observable.empty())
-      .map(l -> from(l));
+      .map(JsonPath::from);
   }
 
   @Override
   public String toString() {
     // memoise string
-    return string != null ? string : (string = fragment() + nextPathToken.map(f -> f.toString()).orElse(""));
+    return string != null ? string : (string = fragment() + nextPathToken.map(JsonPath::toString).orElse(""));
   }
 
   @Override
@@ -79,7 +79,7 @@ public abstract class JsonPath implements Cloneable {
 
   public int length() {
     // memoise length
-    return length != null ? length : (length = 1 + nextPathToken.map(t -> t.length()).orElse(0));
+    return length != null ? length : (length = 1 + nextPathToken.map(JsonPath::length).orElse(0));
   }
 
   abstract int tokenHash();

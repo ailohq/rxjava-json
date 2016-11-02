@@ -21,7 +21,6 @@ import com.trunk.rx.json.token.JsonToken;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 import rx.Observable;
-import rx.Subscription;
 import rx.observers.TestSubscriber;
 import rx.schedulers.Schedulers;
 
@@ -1425,7 +1424,8 @@ public class OperatorJsonTokenTest {
           .addAll(repeat(JsonArray.start(), 40))
           .addAll(repeat(JsonArray.end(), 40))
           .add(JsonDocumentEnd.instance())
-          .build().toArray(new JsonToken[0])
+          .build()
+          .toArray(new JsonToken[0])
       )
       .run();
   }
@@ -1552,7 +1552,7 @@ public class OperatorJsonTokenTest {
       given(LENIENT_PARSER).when("{\"name\":false").thenType(JsonObjectStart.class, JsonName.class, JsonBoolean.class).then(MalformedJsonException.class),
       given(LENIENT_PARSER).when("{\"name\":false,,").thenType(JsonObjectStart.class, JsonName.class, JsonBoolean.class).then(MalformedJsonException.class)
     )
-      .forEach(testItem -> testItem.run());
+      .forEach(TestItem::run);
   }
 
   @Test
@@ -1647,7 +1647,7 @@ public class OperatorJsonTokenTest {
     StringBuilder buf = new StringBuilder();
     Observable.just("{\"a\":\"b\"} true [1,2,3] false")
       .lift(CharacterObservable.toCharacter())
-      .doOnNext(c -> buf.append(c))
+      .doOnNext(buf::append)
       .lift(LENIENT_PARSER)
       .take(3)
       .subscribe();
@@ -1661,9 +1661,9 @@ public class OperatorJsonTokenTest {
     ts.requestMore(0);
     StringBuilder emitted = new StringBuilder();
     CharacterObservable.from(" true {\"a\":1234,\"b\":[1,2,3,],\"c\":{\"w\":[,,7,[8]],x:true,\"y\":false,\"z\":null},\"d\":[{\"1\":\"1\"}]}")
-      .doOnNext(c -> emitted.append(c))
+      .doOnNext(emitted::append)
       .lift(LENIENT_PARSER)
-      .map(e -> e.getToken())
+      .map(JsonTokenEvent::getToken)
       .subscribe(ts);
 
     ts.assertNoValues();
@@ -2043,9 +2043,9 @@ public class OperatorJsonTokenTest {
     ts.requestMore(0);
     StringBuilder emitted = new StringBuilder();
     CharacterObservable.from("  true  {  }  [  \"a\"  ,  b  ]  ")
-      .doOnNext(c -> emitted.append(c))
+      .doOnNext(emitted::append)
       .lift(LENIENT_PARSER)
-      .map(e -> e.getToken())
+      .map(JsonTokenEvent::getToken)
       .subscribe(ts);
 
     ts.assertNoValues();
@@ -2149,16 +2149,17 @@ public class OperatorJsonTokenTest {
     long[] chars = {0};
     long[] tokens = {0};
     int range = 100_000_000;
-    Subscription s =
-      Observable.range(0, range)
-        .doOnNext(i -> {
-          if (i % 100_000 == 0) {System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));}
-        })
-        .concatMap(i -> CharacterObservable.from(" { } "))
-        .doOnNext(c -> chars[0] += 1)
-        .lift(LENIENT_PARSER)
-        .doOnNext(t -> tokens[0] += 1)
-        .subscribe();
+    Observable.range(0, range)
+      .doOnNext(i -> {
+        if (i % 100_000 == 0) {
+          System.out.println(String.format("%,d, of %,d (%s)", i, range, ZonedDateTime.now()));
+        }
+      })
+      .concatMap(i -> CharacterObservable.from(" { } "))
+      .doOnNext(c -> chars[0] += 1)
+      .lift(LENIENT_PARSER)
+      .doOnNext(t -> tokens[0] += 1)
+      .subscribe();
 
     assertEquals(chars[0], range * 5L);
     assertEquals(tokens[0], range * 3L);
@@ -2265,7 +2266,7 @@ public class OperatorJsonTokenTest {
     return builder.toString();
   }
 
-  public static final String[] EMPTY_ARRAY = {};
+  private static final String[] EMPTY_ARRAY = {};
 
   public static TestItem should(String description) {
     return new TestItem(
@@ -2293,12 +2294,12 @@ public class OperatorJsonTokenTest {
     );
   }
 
-  private enum Is {
+  public enum Is {
     COMPLETED,
     NOT_COMPLETED
   }
 
-  private static class TestItem {
+  public static class TestItem {
 
     private final String[] jsonFragments;
     private final Optional<JsonToken[]> expectedTokens;
@@ -2361,12 +2362,12 @@ public class OperatorJsonTokenTest {
         Observable.from(jsonFragments)
           .lift(CharacterObservable.toCharacter())
           .lift(operatorJsonToken)
-          .map(e -> e.getToken())
+          .map(JsonTokenEvent::getToken)
           .subscribe(ts);
 
         ts.awaitTerminalEvent(2, TimeUnit.SECONDS);
 
-        error.ifPresent(e -> ts.assertError(e));
+        error.ifPresent(ts::assertError);
         message.ifPresent(
           m ->
             assertEquals(ts.getOnErrorEvents().get(0).getMessage(), m)
@@ -2379,11 +2380,11 @@ public class OperatorJsonTokenTest {
             ts.assertNotCompleted();
           }
         });
-        expectedTokens.ifPresent(t -> ts.assertValues(t));
+        expectedTokens.ifPresent(ts::assertValues);
         expectedTokenTypes.ifPresent(
           t ->
             assertEquals(
-              ts.getOnNextEvents().stream().map(jsonToken -> jsonToken.getClass()).collect(Collectors.toList()),
+              ts.getOnNextEvents().stream().map(JsonToken::getClass).collect(Collectors.toList()),
               ImmutableList.copyOf(t)
             )
         );

@@ -1,6 +1,5 @@
 package com.trunk.rx.json.hal;
 
-import com.google.gson.Gson;
 import com.trunk.rx.json.RxJson;
 import com.trunk.rx.json.element.JsonObject;
 import com.trunk.rx.json.element.JsonValueBuilder;
@@ -15,8 +14,7 @@ import static rx.Observable.just;
 
 public class HalObjectTest {
 
-  public static final JsonValueBuilder VALUE_BUILDER = JsonValueBuilder.instance();
-  private Gson gson = new Gson();
+  private static final JsonValueBuilder VALUE_BUILDER = JsonValueBuilder.instance();
 
   @Test
   public void shouldReturnEmptyObject() throws Exception {

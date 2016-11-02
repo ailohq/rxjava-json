@@ -129,7 +129,7 @@ public class JsonValueBuilder {
   public JsonElement create(Observable<String> values) {
     return new JsonElement(
       Observable.<JsonToken>just(JsonQuote.instance())
-        .concatWith(values.map(value -> JsonString.of(value)))
+        .concatWith(values.map(JsonString::of))
         .concatWith(Observable.just(JsonQuote.instance()))
     );
   }

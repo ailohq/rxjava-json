@@ -41,7 +41,7 @@ public class RecursiveToken extends JsonPath {
       if (result.isPresent()) {
         return result;
       }
-      tempPath.ifPresent(p -> matchedFragments.add(p));
+      tempPath.ifPresent(matchedFragments::add);
       tempPath = tempPath.flatMap(p -> p.nextPathToken);
     }
 

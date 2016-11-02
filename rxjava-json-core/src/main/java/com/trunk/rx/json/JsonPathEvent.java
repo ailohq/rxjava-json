@@ -42,10 +42,6 @@ public class JsonPathEvent {
 
   @Override
   public String toString() {
-    final StringBuilder sb = new StringBuilder("JsonPathEvent{");
-    sb.append("matchedPathFragment='").append(matchedPathFragment).append('\'');
-    sb.append(", token=").append(token);
-    sb.append('}');
-    return sb.toString();
+    return "JsonPathEvent{matchedPathFragment='" + matchedPathFragment + '\'' + ", token=" + token + '}';
   }
 }

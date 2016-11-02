@@ -3,7 +3,6 @@ package com.trunk.rx.json.element;
 import com.trunk.rx.json.token.JsonColon;
 import com.trunk.rx.json.token.JsonComma;
 import com.trunk.rx.json.token.JsonName;
-import com.trunk.rx.json.token.JsonNull;
 import com.trunk.rx.json.token.JsonObjectEnd;
 import com.trunk.rx.json.token.JsonObjectStart;
 import com.trunk.rx.json.token.JsonQuote;
@@ -26,6 +25,7 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
     return new JsonObject<>(Observable.from(elements));
   }
 
+  @SafeVarargs
   public static <T extends JsonElement> JsonObject<T> of(Entry<T>... elements) {
     return new JsonObject<>(Observable.from(elements));
   }

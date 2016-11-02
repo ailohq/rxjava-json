@@ -300,10 +300,7 @@ public class OperatorJsonGson implements Observable.Operator<GsonPathEvent, Json
     }
     private boolean popAndEmitIfObjectComplete(JsonPath path) {
       stackSize -= 1;
-      if (stackSize == 0) {
-        return emit(path, stack[0]);
-      }
-      return false;
+      return stackSize == 0 && emit(path, stack[0]);
     }
 
     private boolean emit(JsonPath path, JsonElement element) {

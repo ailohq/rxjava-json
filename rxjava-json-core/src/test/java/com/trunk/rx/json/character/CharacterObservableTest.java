@@ -28,7 +28,7 @@ public class CharacterObservableTest {
     List<Character> cs = new ArrayList<>();
     TestSubscriber<Character> t = new TestSubscriber<>();
     CharacterObservable.from("this is a string")
-      .doOnNext(c -> cs.add(c))
+      .doOnNext(cs::add)
       .take(5)
       .subscribe(t);
     t.assertNoErrors();

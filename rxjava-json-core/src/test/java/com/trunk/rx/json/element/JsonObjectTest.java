@@ -1,14 +1,11 @@
 package com.trunk.rx.json.element;
 
-import com.google.gson.Gson;
 import org.testng.annotations.Test;
 import rx.Observable;
 
 import static com.trunk.rx.json.Assert.assertEquals;
 
 public class JsonObjectTest {
-  private Gson gson = new Gson();
-
   @Test
   public void shouldAcceptSingleValue() throws Exception {
     assertEquals(

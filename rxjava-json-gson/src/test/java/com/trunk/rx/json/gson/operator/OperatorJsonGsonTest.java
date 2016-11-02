@@ -358,7 +358,7 @@ public class OperatorJsonGsonTest {
 
         ts.awaitTerminalEvent(2, TimeUnit.SECONDS);
 
-        error.ifPresent(e -> ts.assertError(e));
+        error.ifPresent(ts::assertError);
         message.ifPresent(
           m ->
             assertEquals(ts.getOnErrorEvents().get(0).getMessage(), m)
@@ -374,19 +374,19 @@ public class OperatorJsonGsonTest {
         expectedObjects.ifPresent(
           o ->
             assertEquals(
-              ts.getOnNextEvents().stream().map(p -> p.getElement()).collect(Collectors.toList()),
+              ts.getOnNextEvents().stream().map(GsonPathEvent::getElement).collect(Collectors.toList()),
               ImmutableList.copyOf(o)
             )
         );
         expectedPaths.ifPresent(
           o ->
             assertEquals(
-              ts.getOnNextEvents().stream().map(p -> p.getPath()).collect(Collectors.toList()),
+              ts.getOnNextEvents().stream().map(GsonPathEvent::getPath).collect(Collectors.toList()),
               ImmutableList.copyOf(o)
             )
         );
       } catch (Throwable t) {
-        String json = String.join("", Arrays.asList(tokens).stream().map(e -> e.getTokenEvent().getToken().value()).collect(Collectors.toList()));
+        String json = String.join("", Arrays.stream(tokens).map(e -> e.getTokenEvent().getToken().value()).collect(Collectors.toList()));
         Assert.fail((description.isEmpty() ? "" : "should " + description + " ") + "'" + json.substring(0, Math.min(json.length(), 120)) + "'", t);
       }
     }

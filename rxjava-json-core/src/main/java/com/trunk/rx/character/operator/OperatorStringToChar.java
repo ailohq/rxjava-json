@@ -16,7 +16,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class OperatorStringToChar implements Observable.Operator<Character, String> {
   @Override
   public Subscriber<? super String> call(Subscriber<? super Character> s) {
-    Subscriber<? super Character> downstream = new SerializedSubscriber<Character>(s);
+    Subscriber<? super Character> downstream = new SerializedSubscriber<>(s);
     CharSubscriber upstream = new CharSubscriber();
     downstream.add(upstream);
     downstream.setProducer(new CharProducer(upstream, downstream));
@@ -26,13 +26,10 @@ public class OperatorStringToChar implements Observable.Operator<Character, Stri
   private final class CharSubscriber extends Subscriber<String> {
     AtomicBoolean completed = new AtomicBoolean(false);
     AtomicBoolean started = new AtomicBoolean(false);
-    AtomicReference<Throwable> error = new AtomicReference<Throwable>();
-    Queue<String> buffer = new ConcurrentLinkedQueue<String>();
-    Action0 reenterProducer = new Action0() {
-      @Override
-      public void call() {
-        // do nothing
-      }
+    AtomicReference<Throwable> error = new AtomicReference<>();
+    Queue<String> buffer = new ConcurrentLinkedQueue<>();
+    Action0 reenterProducer = () -> {
+      // do nothing
     };
 
     CharSubscriber() {
@@ -94,12 +91,7 @@ public class OperatorStringToChar implements Observable.Operator<Character, Stri
     CharProducer(CharSubscriber upstream, Subscriber<? super Character> downstream) {
       this.upstream = upstream;
       this.downstream = downstream;
-      upstream.reenterProducer(new Action0() {
-        @Override
-        public void call() {
-          CharProducer.this.request(0);
-        }
-      });
+      upstream.reenterProducer(() -> CharProducer.this.request(0));
     }
 
     @Override

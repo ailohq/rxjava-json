@@ -8,7 +8,7 @@ import static org.testng.Assert.assertEquals;
 
 public class JsonPathParserTest {
 
-  public static final JsonPathParser PARSER = new JsonPathParser();
+  private static final JsonPathParser PARSER = new JsonPathParser();
 
   @Test(expectedExceptions = MalformedPathException.class)
   public void shouldRejectEmptyString() throws Exception {

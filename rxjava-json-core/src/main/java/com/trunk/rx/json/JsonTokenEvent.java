@@ -42,9 +42,6 @@ public class JsonTokenEvent {
 
   @Override
   public String toString() {
-    String sb = "JsonTokenEvent{" + "jsonPath='" + jsonPath + '\'' +
-      ", token=" + token +
-      '}';
-    return sb;
+    return "JsonTokenEvent{jsonPath='" + jsonPath + '\'' + ", token=" + token + '}';
   }
 }

@@ -17,7 +17,7 @@ import java.util.Optional;
  * <p>
  * This is the top level object returned or embedded in another HalObject.
  */
-public class HalObject extends JsonElement {
+public final class HalObject extends JsonElement {
 
   private static final class Holder {
     private static final String SELF = "self";
@@ -529,7 +529,8 @@ public class HalObject extends JsonElement {
    * @param data the data to append as JsonObject Entries
    * @return a new HalObject
    */
-  public HalObject appendData(JsonObject.Entry<JsonElement>... data) {
+  @SafeVarargs
+  public final HalObject appendData(JsonObject.Entry<JsonElement>... data) {
     Objects.requireNonNull(data, "appendData requires a non-null data");
 
     return appendData(Observable.from(data));

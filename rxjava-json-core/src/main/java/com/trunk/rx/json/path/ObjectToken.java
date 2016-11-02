@@ -30,7 +30,7 @@ public class ObjectToken extends JsonPath {
   @Override
   Optional<List<JsonPath>> doMatch(Optional<JsonPath> pathToTest, List<JsonPath> matchedFragments) {
     return pathToTest
-      .filter(p -> tokenEquals(p))
+      .filter(this::tokenEquals)
       .flatMap(p -> matchNextFragment(p, matchedFragments));
   }
 

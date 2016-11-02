@@ -14,7 +14,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class JsonValueBuilderTest {
 
-  public static final JsonValueBuilder JSON_VALUE_BUILDER = JsonValueBuilder.instance();
+  private static final JsonValueBuilder JSON_VALUE_BUILDER = JsonValueBuilder.instance();
 
   @Test
   public void shouldReturnStringWithQuotes() throws Exception {

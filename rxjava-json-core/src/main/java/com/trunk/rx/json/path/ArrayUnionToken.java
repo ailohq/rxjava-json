@@ -39,7 +39,7 @@ public class ArrayUnionToken extends ArrayToken {
 
   @Override
   String arrayValue() {
-    return String.join(",", delegates.stream().map(d -> d.arrayValue()).collect(Collectors.toList()));
+    return String.join(",", delegates.stream().map(ArrayToken::arrayValue).collect(Collectors.toList()));
   }
 
   @Override

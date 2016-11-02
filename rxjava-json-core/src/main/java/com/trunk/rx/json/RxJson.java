@@ -54,6 +54,7 @@ public class RxJson {
   /**
    * @return a new immutable JsonArray with the given elements
    */
+  @SafeVarargs
   public static <T extends JsonElement> JsonArray<T> newArray(T... values) {
     return JsonArray.of(values);
   }
@@ -82,6 +83,7 @@ public class RxJson {
   /**
    * @return a new immutable JsonArray with the given entries
    */
+  @SafeVarargs
   public static <T extends JsonElement> JsonObject<T> newObject(JsonObject.Entry<T>... values) {
     return JsonObject.of(values);
   }

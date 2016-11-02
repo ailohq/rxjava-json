@@ -22,6 +22,7 @@ public class JsonArray<T extends JsonElement> extends JsonElement {
     return new JsonArray<>(Observable.from(elements));
   }
 
+  @SafeVarargs
   public static <T extends JsonElement> JsonArray<T> of(T... elements) {
     return new JsonArray<>(Observable.from(elements));
   }

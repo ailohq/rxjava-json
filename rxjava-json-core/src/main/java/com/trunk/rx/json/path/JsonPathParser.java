@@ -290,10 +290,12 @@ public class JsonPathParser {
   }
 
   private void unexpectedEndOfPath(CharacterIndex path) {
-    throw new MalformedPathException("Unexpected end of path");
+    throw new MalformedPathException("Unexpected end of path '" + path + "'");
   }
 
   private void illegalCharacter(CharacterIndex path, String... expected) {
-    throw new MalformedPathException("Illegal character '" + path.currentChar() + "' at position " + path.position() + ", expected " + String.join(" or ", Arrays.asList(expected).stream().map(c -> "'" + c + "'").collect(Collectors.toList())));
+    throw new MalformedPathException(
+      "Illegal character '" + path.currentChar() + "' at position " + path.position() +
+        ", expected " + String.join(" or ", Arrays.stream(expected).map(c -> "'" + c + "'").collect(Collectors.toList())));
   }
 }
