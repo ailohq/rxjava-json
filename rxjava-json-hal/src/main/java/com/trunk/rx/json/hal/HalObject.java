@@ -1,5 +1,6 @@
 package com.trunk.rx.json.hal;
 
+import com.trunk.rx.json.RxJson;
 import com.trunk.rx.json.element.JsonArray;
 import com.trunk.rx.json.element.JsonElement;
 import com.trunk.rx.json.element.JsonObject;
@@ -28,9 +29,9 @@ public class HalObject extends JsonElement {
   }
 
   private final Optional<HalLink> self;
-  private final Map<String, HalLink> singletonLinks;
+  private final Map<String, Observable<HalLink>> singletonLinks;
   private final Map<String, Observable<HalLink>> arrayLinks;
-  private final Map<String, HalObject> singletonEmbedded;
+  private final Map<String, Observable<HalObject>> singletonEmbedded;
   private final Map<String, Observable<HalObject>> arrayEmbedded;
   private final Observable<JsonObject.Entry<JsonElement>> data;
   private final boolean lenient;
@@ -43,9 +44,9 @@ public class HalObject extends JsonElement {
   }
 
   private HalObject(Optional<HalLink> self,
-                    Map<String, HalLink> singletonLinks,
+                    Map<String, Observable<HalLink>> singletonLinks,
                     Map<String, Observable<HalLink>> arrayLinks,
-                    Map<String, HalObject> singletonEmbedded,
+                    Map<String, Observable<HalObject>> singletonEmbedded,
                     Map<String, Observable<HalObject>> arrayEmbedded,
                     Observable<JsonObject.Entry<JsonElement>> data,
                     boolean lenient) {
@@ -61,7 +62,12 @@ public class HalObject extends JsonElement {
                 self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(Holder.SELF, s))).orElse(Observable.empty())
                   .concatWith(
                     Observable.from(singletonLinks.entrySet())
-                      .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
+                      .flatMap(
+                        e ->
+                          e.getValue()
+                            .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
+                            .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+                      )
                       .concatWith(
                         Observable.from(arrayLinks.entrySet())
                           .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
@@ -88,7 +94,12 @@ public class HalObject extends JsonElement {
               Holder.EMBEDDED,
               JsonObject.of(
                 Observable.from(singletonEmbedded.entrySet())
-                  .<JsonObject.Entry<JsonElement>>map(e -> JsonObject.entry(e.getKey(), e.getValue()))
+                  .flatMap(
+                    e ->
+                      e.getValue()
+                        .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
+                        .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+                  )
                   .concatWith(
                     Observable.from(arrayEmbedded.entrySet())
                       .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
@@ -161,11 +172,28 @@ public class HalObject extends JsonElement {
   public HalObject putLink(String rel, HalLink link) {
     Objects.requireNonNull(rel, "putLink requires a non-null rel");
     Objects.requireNonNull(link, "putLink requires a non-null link");
+
+    return putLink(rel, Observable.just(link));
+  }
+
+
+  /**
+   * Replace the given rel with a single value link, using the first value returned
+   * or <code>null</code> if the observable is empty.
+   *
+   * @param rel the relation name
+   * @param link the relation link
+   * @return a new HalObject
+   * @throws HalKeyException if the rel 'self' is specified
+   */
+  public HalObject putLink(String rel, Observable<HalLink> link) {
+    Objects.requireNonNull(rel, "putLink requires a non-null rel");
+    Objects.requireNonNull(link, "putLink requires a non-null link");
     requireRelNotSelf(rel);
 
-    Map<String, HalLink> newSingleton = new HashMap<>(singletonLinks);
+    Map<String, Observable<HalLink>> newSingleton = new HashMap<>(singletonLinks);
     Map<String, Observable<HalLink>> newArray = new HashMap<>(arrayLinks);
-    newSingleton.put(rel, link);
+    newSingleton.put(rel, link.take(1));
     newArray.remove(rel);
     return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient);
   }
@@ -178,12 +206,12 @@ public class HalObject extends JsonElement {
    * @return a new HalObject
    * @throws HalKeyException if the rel 'self' is specified
    */
-  public HalObject putLinks(String rel, Observable<HalLink> links) {
-    Objects.requireNonNull(rel, "putLinks requires a non-null rel");
-    Objects.requireNonNull(links, "putLinks requires a non-null links");
+  public HalObject putAllLinks(String rel, Observable<HalLink> links) {
+    Objects.requireNonNull(rel, "putAllLinks requires a non-null rel");
+    Objects.requireNonNull(links, "putAllLinks requires a non-null links");
     requireRelNotSelf(rel);
 
-    Map<String, HalLink> newSingleton = new HashMap<>(singletonLinks);
+    Map<String, Observable<HalLink>> newSingleton = new HashMap<>(singletonLinks);
     Map<String, Observable<HalLink>> newArray = new HashMap<>(arrayLinks);
     newSingleton.remove(rel);
     newArray.put(rel, links);
@@ -198,12 +226,12 @@ public class HalObject extends JsonElement {
    * @return a new HalObject
    * @throws HalKeyException if the rel 'self' is specified
    */
-  public HalObject putLinks(String rel, Iterable<HalLink> links) {
-    Objects.requireNonNull(rel, "putLinks requires a non-null rel");
-    Objects.requireNonNull(links, "putLinks requires a non-null links");
+  public HalObject putAllLinks(String rel, Iterable<HalLink> links) {
+    Objects.requireNonNull(rel, "putAllLinks requires a non-null rel");
+    Objects.requireNonNull(links, "putAllLinks requires a non-null links");
     requireRelNotSelf(rel);
 
-    return putLinks(rel, Observable.from(links));
+    return putAllLinks(rel, Observable.from(links));
   }
 
   /**
@@ -214,21 +242,21 @@ public class HalObject extends JsonElement {
    * @return a new HalObject
    * @throws HalKeyException if the rel 'self' is specified
    */
-  public HalObject putLinks(String rel, HalLink... links) {
-    Objects.requireNonNull(rel, "putLinks requires a non-null rel");
-    Objects.requireNonNull(links, "putLinks requires a non-null links");
+  public HalObject putAllLinks(String rel, HalLink... links) {
+    Objects.requireNonNull(rel, "putAllLinks requires a non-null rel");
+    Objects.requireNonNull(links, "putAllLinks requires a non-null links");
     requireRelNotSelf(rel);
 
-    return putLinks(rel, Observable.from(links));
+    return putAllLinks(rel, Observable.from(links));
   }
 
   /**
-   * Append a link to the given rel. If the rel contains single value link
+   * Append a link to the given rel. If the rel already contains single value link
    * this will be converted to an array of links.
    *
    * @param rel the relation name
    * @param link the relation link
-   * @return a new HalObject
+   * @return a new HalObject with the link added as part of an array
    * @throws HalKeyException if the rel 'self' is specified
    */
   public HalObject appendLink(String rel, HalLink link) {
@@ -253,13 +281,13 @@ public class HalObject extends JsonElement {
     Objects.requireNonNull(links, "appendLinks requires a non-null links");
     requireRelNotSelf(rel);
 
-    Map<String, HalLink> newSingleton = new HashMap<>(singletonLinks);
+    Map<String, Observable<HalLink>> newSingleton = new HashMap<>(singletonLinks);
     Map<String, Observable<HalLink>> newArray = new HashMap<>(arrayLinks);
     Observable<HalLink> newValue = newArray.containsKey(rel) ?
       newArray.get(rel).concatWith(links) :
       (
         newSingleton.containsKey(rel) ?
-          Observable.just(newSingleton.get(rel)).concatWith(links) :
+          newSingleton.get(rel).concatWith(links) :
           links
       );
     newSingleton.remove(rel);
@@ -309,12 +337,27 @@ public class HalObject extends JsonElement {
    * @return a new HalObject
    */
   public HalObject putEmbedded(String key, HalObject embedded) {
-    Objects.requireNonNull(key, "putEmbedded requires a non-null key");
-    Objects.requireNonNull(embedded, "putEmbedded requires a non-null embedded");
+    Objects.requireNonNull(key, "putAllEmbedded requires a non-null key");
+    Objects.requireNonNull(embedded, "putAllEmbedded requires a non-null embedded");
 
-    Map<String, HalObject> newSingleton = new HashMap<>(singletonEmbedded);
+    return putEmbedded(key, Observable.just(embedded));
+  }
+
+  /**
+   * Replace the given embedded with a single value HalObject, using the first value returned
+   * or <code>null</code> if the observable is empty.
+   *
+   * @param key the object name
+   * @param embedded the embedded object
+   * @return a new HalObject
+   */
+  public HalObject putEmbedded(String key, Observable<HalObject> embedded) {
+    Objects.requireNonNull(key, "putAllEmbedded requires a non-null key");
+    Objects.requireNonNull(embedded, "putAllEmbedded requires a non-null embedded");
+
+    Map<String, Observable<HalObject>> newSingleton = new HashMap<>(singletonEmbedded);
     Map<String, Observable<HalObject>> newArray = new HashMap<>(arrayEmbedded);
-    newSingleton.put(key, embedded);
+    newSingleton.put(key, embedded.take(1));
     newArray.remove(key);
     return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient);
   }
@@ -326,11 +369,11 @@ public class HalObject extends JsonElement {
    * @param embedded the embedded objects
    * @return a new HalObject
    */
-  public HalObject putEmbedded(String key, Observable<HalObject> embedded) {
-    Objects.requireNonNull(key, "putEmbedded requires a non-null key");
-    Objects.requireNonNull(embedded, "putEmbedded requires a non-null embedded");
+  public HalObject putAllEmbedded(String key, Observable<HalObject> embedded) {
+    Objects.requireNonNull(key, "putAllEmbedded requires a non-null key");
+    Objects.requireNonNull(embedded, "putAllEmbedded requires a non-null embedded");
 
-    Map<String, HalObject> newSingleton = new HashMap<>(singletonEmbedded);
+    Map<String, Observable<HalObject>> newSingleton = new HashMap<>(singletonEmbedded);
     Map<String, Observable<HalObject>> newArray = new HashMap<>(arrayEmbedded);
     newSingleton.remove(key);
     newArray.put(key, embedded);
@@ -344,11 +387,11 @@ public class HalObject extends JsonElement {
    * @param embedded the embedded objects
    * @return a new HalObject
    */
-  public HalObject putEmbedded(String key, Iterable<HalObject> embedded) {
-    Objects.requireNonNull(key, "putEmbedded requires a non-null key");
-    Objects.requireNonNull(embedded, "putEmbedded requires a non-null embedded");
+  public HalObject putAllEmbedded(String key, Iterable<HalObject> embedded) {
+    Objects.requireNonNull(key, "putAllEmbedded requires a non-null key");
+    Objects.requireNonNull(embedded, "putAllEmbedded requires a non-null embedded");
 
-    return putEmbedded(key, Observable.from(embedded));
+    return putAllEmbedded(key, Observable.from(embedded));
   }
 
   /**
@@ -358,11 +401,11 @@ public class HalObject extends JsonElement {
    * @param embedded the embedded objects
    * @return a new HalObject
    */
-  public HalObject putEmbedded(String key, HalObject... embedded) {
-    Objects.requireNonNull(key, "putEmbedded requires a non-null key");
-    Objects.requireNonNull(embedded, "putEmbedded requires a non-null embedded");
+  public HalObject putAllEmbedded(String key, HalObject... embedded) {
+    Objects.requireNonNull(key, "putAllEmbedded requires a non-null key");
+    Objects.requireNonNull(embedded, "putAllEmbedded requires a non-null embedded");
 
-    return putEmbedded(key, Observable.from(embedded));
+    return putAllEmbedded(key, Observable.from(embedded));
   }
 
   /**
@@ -371,7 +414,7 @@ public class HalObject extends JsonElement {
    *
    * @param key the object name
    * @param embedded the embedded objects
-   * @return a new HalObject
+   * @return a new HalObject with the object added as part of an array
    */
   public HalObject appendEmbedded(String key, HalObject embedded) {
     Objects.requireNonNull(key, "appendEmbedded requires a non-null key");
@@ -392,13 +435,13 @@ public class HalObject extends JsonElement {
     Objects.requireNonNull(key, "appendEmbedded requires a non-null key");
     Objects.requireNonNull(embedded, "appendEmbedded requires a non-null embedded");
 
-    Map<String, HalObject> newSingleton = new HashMap<>(singletonEmbedded);
+    Map<String, Observable<HalObject>> newSingleton = new HashMap<>(singletonEmbedded);
     Map<String, Observable<HalObject>> newArray = new HashMap<>(arrayEmbedded);
     Observable<HalObject> newValue = newArray.containsKey(key) ?
         newArray.get(key).concatWith(embedded) :
         (
             newSingleton.containsKey(key) ?
-                Observable.just(newSingleton.get(key)).concatWith(embedded) :
+                newSingleton.get(key).concatWith(embedded) :
                 embedded
         );
     newSingleton.remove(key);
@@ -445,6 +488,22 @@ public class HalObject extends JsonElement {
    * @throws HalKeyException if HAL reserved keys are used
    */
   public HalObject appendData(String key, JsonElement data) {
+    Objects.requireNonNull(key, "appendData requires a non-null key");
+    Objects.requireNonNull(data, "appendData requires a non-null data");
+    requireKeyNotReserved(key);
+
+    return appendData(JsonObject.entry(key, data));
+  }
+
+  /**
+   * Append data to the HalObject. This does not check for duplicate key names.
+   *
+   * @param key the data key name
+   * @param data the data to append
+   * @return a new HalObject
+   * @throws HalKeyException if HAL reserved keys are used
+   */
+  public HalObject appendData(String key, Observable<JsonElement> data) {
     Objects.requireNonNull(key, "appendData requires a non-null key");
     Objects.requireNonNull(data, "appendData requires a non-null data");
     requireKeyNotReserved(key);

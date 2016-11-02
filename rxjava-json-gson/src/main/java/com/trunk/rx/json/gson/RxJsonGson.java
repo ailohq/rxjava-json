@@ -2,7 +2,6 @@ package com.trunk.rx.json.gson;
 
 import com.google.gson.Gson;
 import com.trunk.rx.json.element.JsonElement;
-import com.trunk.rx.json.element.JsonRaw;
 import com.trunk.rx.json.gson.transformer.TransformerObjectToJsonElement;
 import com.trunk.rx.json.gson.transformer.TransformerRxJsonGson;
 import com.trunk.rx.json.path.JsonPath;

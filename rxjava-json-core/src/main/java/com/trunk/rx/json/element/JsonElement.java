@@ -6,7 +6,7 @@ import rx.Observable;
 public class JsonElement extends Observable<JsonToken> {
 
   protected JsonElement(Observable<JsonToken> tokens) {
-    super(subscriber -> tokens.subscribe(subscriber));
+    super(tokens::subscribe);
   }
 
   protected JsonElement(JsonToken token) {

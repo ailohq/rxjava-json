@@ -3,6 +3,7 @@ package com.trunk.rx.json.element;
 import com.trunk.rx.json.token.JsonColon;
 import com.trunk.rx.json.token.JsonComma;
 import com.trunk.rx.json.token.JsonName;
+import com.trunk.rx.json.token.JsonNull;
 import com.trunk.rx.json.token.JsonObjectEnd;
 import com.trunk.rx.json.token.JsonObjectStart;
 import com.trunk.rx.json.token.JsonQuote;
@@ -30,6 +31,10 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
   }
 
   public static <T extends JsonElement> Entry<T> entry(String key, T value) {
+    return entry(key, just(value));
+  }
+
+  public static <T extends JsonElement> Entry<T> entry(String key, Observable<T> value) {
     return new Entry<>(key, value);
   }
 
@@ -43,7 +48,13 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
                             Observable.<JsonToken>just(JsonComma.instance())
                                 .concatWith(Observable.just(JsonQuote.instance(), JsonName.of(entry.getKey()), JsonQuote.instance()))
                                 .concatWith(Observable.just(JsonColon.instance()))
-                                .concatWith(entry.getValue())
+                                .concatWith(
+                                  entry.getValue()
+                                    .take(1)
+                                    .cast(JsonElement.class)
+                                    .defaultIfEmpty(JsonValueBuilder.instance().Null())
+                                    .flatMap(e -> e)
+                                )
                     )
                     .skip(1)
             )
@@ -64,12 +75,16 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
     return new JsonObject<>(this.elements.concatWith(Observable.just(entry(key, value))));
   }
 
+  public JsonObject<T> add(String key, Observable<T> value) {
+    return new JsonObject<>(this.elements.concatWith(Observable.just(entry(key, value))));
+  }
+
   public static final class Entry<T extends JsonElement> {
 
     private String key;
-    private T value;
+    private Observable<T> value;
 
-    public Entry(String key, T value) {
+    public Entry(String key, Observable<T> value) {
       this.key = key;
       this.value = value;
     }
@@ -78,7 +93,7 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
       return key;
     }
 
-    public T getValue() {
+    public Observable<T> getValue() {
       return value;
     }
   }
