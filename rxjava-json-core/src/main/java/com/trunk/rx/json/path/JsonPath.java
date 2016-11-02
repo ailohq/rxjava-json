@@ -82,6 +82,10 @@ public abstract class JsonPath implements Cloneable {
     return length != null ? length : (length = 1 + nextPathToken.map(JsonPath::length).orElse(0));
   }
 
+  public abstract boolean isWildcard();
+
+  public abstract boolean tokenEquals(JsonPath jsonPath);
+
   abstract int tokenHash();
 
   abstract Optional<List<JsonPath>> doMatch(Optional<JsonPath> pathToTest, List<JsonPath> matchedFragments);
@@ -92,13 +96,15 @@ public abstract class JsonPath implements Cloneable {
 
   abstract AccessorType accessorType();
 
-  abstract boolean tokenEquals(JsonPath jsonPath);
-
   Optional<List<JsonPath>> matchNextFragment(JsonPath pathToTest, List<JsonPath> matchedFragments) {
     List<JsonPath> newMatchedFragments = new ArrayList<>(matchedFragments);
     newMatchedFragments.add(pathToTest);
     return nextPathToken
       .map(myNext -> myNext.doMatch(pathToTest.nextPathToken, newMatchedFragments))
       .orElse(Optional.of(newMatchedFragments));
+  }
+
+  public Optional<JsonPath> getNextPathToken() {
+    return nextPathToken;
   }
 }

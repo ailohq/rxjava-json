@@ -54,7 +54,12 @@ public class WildcardToken extends JsonPath {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean isWildcard() {
+    return true;
+  }
+
+  @Override
+  public boolean tokenEquals(JsonPath jsonPath) {
     return jsonPath instanceof WildcardToken;
   }
 }

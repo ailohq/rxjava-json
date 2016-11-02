@@ -23,6 +23,11 @@ public class ObjectToken extends JsonPath {
   }
 
   @Override
+  public boolean isWildcard() {
+    return false;
+  }
+
+  @Override
   int tokenHash() {
     return Objects.hashCode(name);
   }
@@ -50,7 +55,7 @@ public class ObjectToken extends JsonPath {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean tokenEquals(JsonPath jsonPath) {
     return jsonPath instanceof ObjectToken && Objects.equals(((ObjectToken) jsonPath).name, name);
   }
 

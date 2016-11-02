@@ -55,7 +55,7 @@ public class ArraySliceToken extends ArrayToken {
   }
 
   @Override
-  boolean tokenEquals(JsonPath jsonPath) {
+  public boolean tokenEquals(JsonPath jsonPath) {
     return
       jsonPath instanceof ArraySliceToken &&
       ((ArraySliceToken) jsonPath).start == start &&

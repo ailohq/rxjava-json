@@ -11,6 +11,7 @@ import com.trunk.rx.json.path.RootToken;
 import com.trunk.rx.json.token.JsonArray;
 import com.trunk.rx.json.token.JsonDocumentEnd;
 import com.trunk.rx.json.token.JsonObject;
+import com.trunk.rx.json.token.JsonString;
 import com.trunk.rx.json.token.JsonToken;
 import org.testng.annotations.Test;
 import rx.Observable;
@@ -174,7 +175,7 @@ public class TransformerJsonPathTest {
       .map(JsonPathEvent::getMatchedPathFragment)
       .subscribe();
 
-    assertEquals(buf.toString(), "{\"a\":1234,\"b\":[1,2,3,4]");
+    assertEquals(buf.toString(), "{\"a\":1234,\"b\":[1,2,3,4],\"c\"");
   }
 
   @Test
@@ -357,6 +358,149 @@ public class TransformerJsonPathTest {
     ts.assertNoErrors();
     ts.assertCompleted();
     ts.assertValues("1","2","3","4","5","6");
+  }
 
+  @Test
+  public void shouldParseMultipleNestedWildcardPaths() throws Exception {
+    TestSubscriber<JsonToken> ts = new TestSubscriber<>();
+    Observable.just("{\n" +
+      "    \"name\": \"John Smth\",\n" +
+      "    \"roleName\": \"PM Team Lead\",\n" +
+      "    \"status\": \"Terminated\",\n" +
+      "    \"_links\": {\n" +
+      "        \"self\": {\"href\": \"/groups/1/settings/staff/100\"},\n" +
+      "        \"employmentHistories\": { \n" +
+      "            \"href\": \"/groups/1/settings/staff/100/employmentHistories\"\n" +
+      "        }\n" +
+      "    },\n" +
+      "    \"_embedded\":{\n" +
+      "        \"xeroEmployee\": {\n" +
+      "            \"name\": \"John H. Smith\",\n" +
+      "            \"_links\": {\n" +
+      "                \"self\": {\"href\":\"/groups/1/xeroEmployees/123\"}\n" +
+      "            }\n" +
+      "        },\n" +
+      "        \"employmentHistories\": [\n" +
+      "            {\n" +
+      "                \"from\": \"2016-01-01\",\n" +
+      "                \"to\": null,\n" +
+      "                \"fullTimeEquivalent\": \"1.0\",\n" +
+      "                \"_links\": {\n" +
+      "                    \"self\": {\"href\": \"/groups/1/settings/staff/100/employmentHistories/5\"}\n" +
+      "                },\n" +
+      "                \"_embedded\": {\n" +
+      "                    \"role\": {\n" +
+      "                        \"name\": \"PM Team Lead\",\n" +
+      "                        \"_links\": {\n" +
+      "                            \"self\": {\"href\": \"/roles/7\"}\n" +
+      "                        }\n" +
+      "                    },\n" +
+      "                    \"trackingCategory\": {\n" +
+      "                        \"name\": \"Property Management\",\n" +
+      "                        \"_links\": {\n" +
+      "                            \"self\": {\"href\": \"/groups/1/trackingcategories/9\"},\n" +
+      "                            \"channel\": {\"href\": \"/channels/3\"}\n" +
+      "                        }\n" +
+      "                    }\n" +
+      "                }\n" +
+      "            }\n" +
+      "        ]\n" +
+      "    }\n" +
+      "}"
+    )
+      .lift(CharacterObservable.toCharacter())
+      .lift(STRICT_PARSER)
+      .compose(TransformerJsonPath.from("$.._links..href"))
+      .map(e -> e.getTokenEvent().getToken())
+      .subscribe(ts);
+
+    ts.assertNoErrors();
+    ts.assertCompleted();
+    ts.assertValues(
+      JsonString.of("/groups/1/settings/staff/100"),
+      JsonString.of("/groups/1/settings/staff/100/employmentHistories"),
+      JsonString.of("/groups/1/xeroEmployees/123"),
+      JsonString.of("/groups/1/settings/staff/100/employmentHistories/5"),
+      JsonString.of("/roles/7"),
+      JsonString.of("/groups/1/trackingcategories/9"),
+      JsonString.of("/channels/3"),
+      JsonDocumentEnd.instance()
+    );
+  }
+
+  @Test
+  public void shouldParseInArray() throws Exception {
+    TestSubscriber<String> ts = new TestSubscriber<>();
+    Observable.just("{\n" +
+      "  \"Id\": \"380d2319-3ca1-472d-b3ab-5d64f253592c\",\n" +
+      "  \"Status\": \"OK\",\n" +
+      "  \"ProviderName\": \"Xero API Previewer\",\n" +
+      "  \"DateTimeUTC\": \"\\/Date(1478066634716)\\/\",\n" +
+      "  \"Organisations\": [\n" +
+      "    {\n" +
+      "      \"APIKey\": \"UEZYTWCZLFLQGEVYD3USDAILJM65IS\",\n" +
+      "      \"Name\": \"Ray White Bankstown\",\n" +
+      "      \"LegalName\": \"Greenwood Property Group Pty Ltd\",\n" +
+      "      \"PaysTax\": true,\n" +
+      "      \"Version\": \"AU\",\n" +
+      "      \"OrganisationType\": \"COMPANY\",\n" +
+      "      \"BaseCurrency\": \"AUD\",\n" +
+      "      \"CountryCode\": \"AU\",\n" +
+      "      \"IsDemoCompany\": false,\n" +
+      "      \"OrganisationStatus\": \"ACTIVE\",\n" +
+      "      \"RegistrationNumber\": \"50127183760\",\n" +
+      "      \"FinancialYearEndDay\": 30,\n" +
+      "      \"FinancialYearEndMonth\": 6,\n" +
+      "      \"SalesTaxBasis\": \"CASH\",\n" +
+      "      \"SalesTaxPeriod\": \"MONTHLY\",\n" +
+      "      \"DefaultSalesTax\": \"Tax Exclusive\",\n" +
+      "      \"DefaultPurchasesTax\": \"Tax Inclusive\",\n" +
+      "      \"PeriodLockDate\": \"\\/Date(1404086400000+0000)\\/\",\n" +
+      "      \"EndOfYearLockDate\": \"\\/Date(1404086400000+0000)\\/\",\n" +
+      "      \"CreatedDateUTC\": \"\\/Date(1465282900000)\\/\",\n" +
+      "      \"OrganisationEntityType\": \"COMPANY\",\n" +
+      "      \"Timezone\": \"AUSEASTERNSTANDARDTIME\",\n" +
+      "      \"ShortCode\": \"!CrQMW\",\n" +
+      "      \"Addresses\": [\n" +
+      "        {\n" +
+      "          \"AddressType\": \"STREET\",\n" +
+      "          \"AddressLine1\": \"68 Marion St\",\n" +
+      "          \"City\": \"BANKSTOWN\",\n" +
+      "          \"Region\": \"NSW\",\n" +
+      "          \"PostalCode\": \"2200\",\n" +
+      "          \"Country\": \"Australia\",\n" +
+      "          \"AttentionTo\": \"\"\n" +
+      "        },\n" +
+      "        {\n" +
+      "          \"AddressType\": \"POBOX\",\n" +
+      "          \"AddressLine1\": \"68 Marion St\",\n" +
+      "          \"City\": \"BANKSTOWN\",\n" +
+      "          \"Region\": \"NSW\",\n" +
+      "          \"PostalCode\": \"2200\",\n" +
+      "          \"Country\": \"Australia\",\n" +
+      "          \"AttentionTo\": \"\"\n" +
+      "        }\n" +
+      "      ],\n" +
+      "      \"Phones\": [\n" +
+      "        {\n" +
+      "          \"PhoneType\": \"OFFICE\",\n" +
+      "          \"PhoneNumber\": \"(02) 9793 3333\",\n" +
+      "          \"PhoneCountryCode\": \"61\"\n" +
+      "        }\n" +
+      "      ],\n" +
+      "      \"ExternalLinks\": [],\n" +
+      "      \"PaymentTerms\": {}\n" +
+      "    }\n" +
+      "  ]\n" +
+      "}")
+      .lift(CharacterObservable.toCharacter())
+      .lift(STRICT_PARSER)
+      .compose(TransformerJsonPath.from("$.Organisations[0]"))
+      .map(e -> e.getTokenEvent().getToken().value())
+      .subscribe(ts);
+
+    ts.assertNoErrors();
+    ts.assertCompleted();
+    ts.assertValueCount(100);
   }
 }
