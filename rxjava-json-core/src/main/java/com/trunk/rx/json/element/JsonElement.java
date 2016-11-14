@@ -5,6 +5,14 @@ import rx.Observable;
 
 public class JsonElement extends Observable<JsonToken> {
 
+  private static final class Holder {
+    private static final JsonElement EMPTY = new JsonElement(Observable.empty());
+  }
+
+  public static JsonElement empty() {
+    return Holder.EMPTY;
+  }
+
   protected JsonElement(Observable<JsonToken> tokens) {
     super(tokens::subscribe);
   }
