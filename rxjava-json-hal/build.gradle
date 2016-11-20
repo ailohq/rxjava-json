@@ -6,6 +6,7 @@ description = 'HAL extensions for RxJava-JSON'
 
 dependencies {
     compile project(':rxjava-json-core')
+    compile 'com.damnhandy:handy-uri-templates:2.1.6'
 
     testCompile project(':rxjava-json-core').sourceSets.test.output
     testCompile 'com.google.guava:guava:19.0'

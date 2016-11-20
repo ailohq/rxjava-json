@@ -29,6 +29,14 @@ public class HalLinkTest {
   }
 
   @Test
+  public void shouldAcceptTempaltedUriAsString() throws Exception {
+    assertEquals(
+      HalLink.create("/test/{rel,foo}/{/q,r}"),
+      "{\"href\":\"/test/{rel,foo}/{/q,r}\",\"templated\":true}"
+    );
+  }
+
+  @Test
   public void shouldAcceptType() throws Exception {
     assertEquals(
         HalLink.create("/test").type("text/*"),

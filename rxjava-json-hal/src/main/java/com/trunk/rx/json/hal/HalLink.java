@@ -1,5 +1,7 @@
 package com.trunk.rx.json.hal;
 
+import com.damnhandy.uri.template.UriTemplate;
+import com.sun.javafx.fxml.builder.URLBuilder;
 import com.trunk.rx.json.element.JsonElement;
 import com.trunk.rx.json.element.JsonObject;
 import com.trunk.rx.json.element.JsonValueBuilder;
@@ -17,7 +19,7 @@ import java.util.stream.Stream;
 public class HalLink extends JsonElement {
 
   private final Optional<String> name;
-  private final URI href;
+  private final String href;
   private final Optional<Boolean> templated;
   private final Optional<String> type;
   private final Optional<String> deprecation;
@@ -25,21 +27,40 @@ public class HalLink extends JsonElement {
   private final Optional<Locale> hreflang;
   private final Optional<String> title;
 
+  /**
+   * Create from a URI.
+   * @param href the href as a URI
+   * @return a new HalLink
+   */
   public static HalLink create(URI href) {
-    return new HalLink(Optional.empty(), href, Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+    return create(href.toASCIIString());
   }
 
+  /**
+   * Create from a String. If href contains template values, templated will be set to true.
+   * @param href the href as a String
+   * @return a new HalLink
+   */
   public static HalLink create(String href) {
-    return create(URI.create(href));
+    return create(UriTemplate.fromTemplate(href));
   }
 
-  protected HalLink(Optional<String> name, URI href, Optional<Boolean> templated, Optional<String> type, Optional<String> deprecation, Optional<URI> profile, Optional<Locale> hreflang, Optional<String> title) {
+  /**
+   * Create from a UriTemplate. If href contains template values, templated will be set to true.
+   * @param href the href as a UriTemplate
+   * @return a new HalLink
+   */
+  public static HalLink create(UriTemplate href) {
+    return new HalLink(Optional.empty(), href.getTemplate(), href.expressionCount() > 0 ? Optional.of(true) : Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty());
+  }
+
+  protected HalLink(Optional<String> name, String href, Optional<Boolean> templated, Optional<String> type, Optional<String> deprecation, Optional<URI> profile, Optional<Locale> hreflang, Optional<String> title) {
     super(
       JsonObject.of(
         Observable.from(
           Stream.<Optional<JsonObject.Entry<JsonElement>>>builder()
             .add(deprecation.map(d -> JsonObject.entry("deprecation", JsonValueBuilder.instance().create(d))))
-            .add(Optional.of(JsonObject.entry("href", JsonValueBuilder.instance().create(href.toASCIIString()))))
+            .add(Optional.of(JsonObject.entry("href", JsonValueBuilder.instance().create(href))))
             .add(hreflang.map(h -> JsonObject.entry("hreflang", JsonValueBuilder.instance().create(h.toString()))))
             .add(name.map(n -> JsonObject.entry("name", JsonValueBuilder.instance().create(n))))
             .add(profile.map(p -> JsonObject.entry("profile", JsonValueBuilder.instance().create(p.toASCIIString()))))
