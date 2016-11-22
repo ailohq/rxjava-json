@@ -35,7 +35,7 @@ public class RxJsonGson {
   /**
    * Transform an Observable of objects to an observable of JsonElements
    */
-  public static Observable.Transformer<Object, JsonElement> toJsonElements() {
+  public static TransformerObjectToJsonElement toJsonElements() {
     return TransformerObjectToJsonElement.instance();
   }
 
