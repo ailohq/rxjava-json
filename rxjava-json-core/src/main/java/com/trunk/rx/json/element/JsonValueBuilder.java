@@ -1,17 +1,18 @@
 package com.trunk.rx.json.element;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.DoubleAdder;
+
 import com.trunk.rx.json.token.JsonBoolean;
 import com.trunk.rx.json.token.JsonNull;
 import com.trunk.rx.json.token.JsonNumber;
 import com.trunk.rx.json.token.JsonQuote;
 import com.trunk.rx.json.token.JsonString;
 import com.trunk.rx.json.token.JsonToken;
-import rx.Observable;
 
-import java.math.BigDecimal;
-import java.math.BigInteger;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.DoubleAdder;
+import rx.Observable;
 
 public class JsonValueBuilder {
 
@@ -140,7 +141,10 @@ public class JsonValueBuilder {
   /**
    * A single JSON boolean.
    */
-  public JsonElement create(boolean value) {
+  public JsonElement create(Boolean value) {
+    if (value == null) {
+      return Null();
+    }
     return new JsonElement(JsonBoolean.of(value));
   }
 
