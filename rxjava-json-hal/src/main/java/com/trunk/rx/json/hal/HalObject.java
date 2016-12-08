@@ -25,7 +25,17 @@ public final class HalObject extends JsonElement {
     private static final String EMBEDDED = "_embedded";
     private static final String DATA_CANNOT_USE_RESERVED_PROPERTY = "Data cannot use reserved property '%s'";
     private static final String LINK_SELF_CAN_ONLY_BE_SET_USING_SELF = "Rel 'self' can only be set using #self";
-    private static final HalObject EMPTY_HAL_OBJECT = new HalObject(Optional.empty(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Collections.emptyMap(), Observable.empty(), false);
+    private static final HalObject EMPTY_HAL_OBJECT =
+      new HalObject(
+        Optional.empty(),
+        Collections.emptyMap(),
+        Collections.emptyMap(),
+        Collections.emptyMap(),
+        Collections.emptyMap(),
+        Observable.empty(),
+        false,
+        Order.LinksEmbeddedData
+      );
   }
 
   private final Optional<HalLink> self;
@@ -35,6 +45,7 @@ public final class HalObject extends JsonElement {
   private final Map<String, Observable<HalObject>> arrayEmbedded;
   private final Observable<JsonObject.Entry<JsonElement>> data;
   private final boolean lenient;
+  private final Order order;
 
   /**
    * @return an immutable empty HalObject
@@ -43,84 +54,19 @@ public final class HalObject extends JsonElement {
     return Holder.EMPTY_HAL_OBJECT;
   }
 
-  private HalObject(Optional<HalLink> self,
-                    Map<String, Observable<HalLink>> singletonLinks,
-                    Map<String, Observable<HalLink>> arrayLinks,
-                    Map<String, Observable<HalObject>> singletonEmbedded,
-                    Map<String, Observable<HalObject>> arrayEmbedded,
-                    Observable<JsonObject.Entry<JsonElement>> data,
-                    boolean lenient) {
+  private HalObject(
+    Optional<HalLink> self,
+    Map<String, Observable<HalLink>> singletonLinks,
+    Map<String, Observable<HalLink>> arrayLinks,
+    Map<String, Observable<HalObject>> singletonEmbedded,
+    Map<String, Observable<HalObject>> arrayEmbedded,
+    Observable<JsonObject.Entry<JsonElement>> data,
+    boolean lenient,
+    Order order
+  ) {
     // this mess is to avoid empty objects in _links and _embedded
     super(
-      JsonObject.of(
-        (
-          self.isPresent() || !singletonLinks.isEmpty() || !arrayLinks.isEmpty() ?
-          Observable.<JsonObject.Entry<JsonElement>>just(
-            JsonObject.entry(
-              Holder.LINKS,
-              JsonObject.of(
-                self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(Holder.SELF, s))).orElse(Observable.empty())
-                  .concatWith(
-                    Observable.from(singletonLinks.entrySet())
-                      .flatMap(
-                        e ->
-                          e.getValue()
-                            .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
-                            .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
-                      )
-                      .concatWith(
-                        Observable.from(arrayLinks.entrySet())
-                          .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
-                      )
-                      .flatMap(e -> {
-                        if (e.getKey().equals(Holder.SELF)) {
-                          if (lenient) {
-                            return Observable.empty();
-                          }
-                          return Observable.error(new HalKeyException(Holder.LINK_SELF_CAN_ONLY_BE_SET_USING_SELF));
-                        }
-                        return Observable.just(e);
-                      })
-                  )
-              )
-            )
-          ) :
-          Observable.<JsonObject.Entry<JsonElement>>empty()
-        )
-        .concatWith(
-          !singletonEmbedded.isEmpty() || !arrayEmbedded.isEmpty() ?
-          Observable.just(
-            JsonObject.entry(
-              Holder.EMBEDDED,
-              JsonObject.of(
-                Observable.from(singletonEmbedded.entrySet())
-                  .flatMap(
-                    e ->
-                      e.getValue()
-                        .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
-                        .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
-                  )
-                  .concatWith(
-                    Observable.from(arrayEmbedded.entrySet())
-                      .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
-                  )
-              )
-            )
-          ) :
-          Observable.empty()
-        )
-        .concatWith(
-          data.flatMap(e -> {
-            if (e.getKey().equals(Holder.LINKS) || e.getKey().equals(Holder.EMBEDDED)) {
-              if (lenient) {
-                return Observable.empty();
-              }
-              return Observable.error(new HalKeyException(String.format(Holder.DATA_CANNOT_USE_RESERVED_PROPERTY, e.getKey())));
-            }
-            return Observable.just(e);
-          })
-        )
-      )
+      JsonObject.of(getOrderedElements(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order))
     );
 
     this.self = self;
@@ -130,6 +76,7 @@ public final class HalObject extends JsonElement {
     this.arrayEmbedded = Collections.unmodifiableMap(arrayEmbedded);
     this.data = data;
     this.lenient = lenient;
+    this.order = order;
   }
 
   /**
@@ -139,7 +86,7 @@ public final class HalObject extends JsonElement {
    * @return an new HalObject
    */
   public HalObject lenient() {
-    return lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, true);
+    return lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, true, order);
   }
 
   /**
@@ -148,7 +95,7 @@ public final class HalObject extends JsonElement {
    * @return an new HalObject
    */
   public HalObject strict() {
-    return !lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, false);
+    return !lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, false, order);
   }
 
   /**
@@ -158,7 +105,7 @@ public final class HalObject extends JsonElement {
    * @return a new HalObject with the self link set to the given value
    */
   public HalObject self(HalLink self) {
-    return new HalObject(Optional.of(self), singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient);
+    return new HalObject(Optional.of(self), singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order);
   }
 
   /**
@@ -195,7 +142,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalLink>> newArray = new HashMap<>(arrayLinks);
     newSingleton.put(rel, link.take(1));
     newArray.remove(rel);
-    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient);
+    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order);
   }
 
   /**
@@ -215,7 +162,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalLink>> newArray = new HashMap<>(arrayLinks);
     newSingleton.remove(rel);
     newArray.put(rel, links);
-    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient);
+    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order);
   }
 
   /**
@@ -292,7 +239,7 @@ public final class HalObject extends JsonElement {
       );
     newSingleton.remove(rel);
     newArray.put(rel, newValue);
-    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient);
+    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order);
   }
 
   /**
@@ -359,7 +306,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalObject>> newArray = new HashMap<>(arrayEmbedded);
     newSingleton.put(key, embedded.take(1));
     newArray.remove(key);
-    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient);
+    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order);
   }
 
   /**
@@ -377,7 +324,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalObject>> newArray = new HashMap<>(arrayEmbedded);
     newSingleton.remove(key);
     newArray.put(key, embedded);
-    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient);
+    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order);
   }
 
   /**
@@ -446,7 +393,7 @@ public final class HalObject extends JsonElement {
         );
     newSingleton.remove(key);
     newArray.put(key, newValue);
-    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient);
+    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order);
   }
 
   /**
@@ -545,7 +492,21 @@ public final class HalObject extends JsonElement {
   public HalObject appendData(Observable<JsonObject.Entry<JsonElement>> data) {
     Objects.requireNonNull(data, "appendData requires a non-null data");
 
-    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, this.data.concatWith(data), lenient);
+    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, this.data.concatWith(data), lenient, order);
+  }
+
+  /**
+   * Set a specific ordering for the emission of _links, _embedded and the data.
+   * This can be used to optimise streaming where the a shared observable emits
+   * to more than one of _links, _embedded or the data.
+   *
+   * @param order the order of emission
+   * @return a new HalObject
+   */
+  public HalObject withOrder(Order order) {
+    Objects.requireNonNull(order, "withOrder requires a non-null order");
+
+    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order);
   }
 
   private void requireRelNotSelf(String rel) {
@@ -558,5 +519,126 @@ public final class HalObject extends JsonElement {
     if (Holder.LINKS.equals(key) || Holder.EMBEDDED.equals(key)) {
       throw new HalKeyException(String.format(Holder.DATA_CANNOT_USE_RESERVED_PROPERTY, key));
     }
+  }
+
+  private static Observable<JsonObject.Entry<JsonElement>> getOrderedElements(
+    Optional<HalLink> self,
+    Map<String, Observable<HalLink>> singletonLinks,
+    Map<String, Observable<HalLink>> arrayLinks,
+    Map<String, Observable<HalObject>> singletonEmbedded,
+    Map<String, Observable<HalObject>> arrayEmbedded,
+    Observable<JsonObject.Entry<JsonElement>> data,
+    boolean lenient,
+    Order order
+  ) {
+    Observable<JsonObject.Entry<JsonElement>> links = getLinks(self, singletonLinks, arrayLinks, lenient);
+    Observable<JsonObject.Entry<JsonElement>> embedded = getEmbedded(singletonEmbedded, arrayEmbedded);
+    Observable<JsonObject.Entry<JsonElement>> _data = getData(lenient, data);
+
+    switch (order) {
+      case LinksEmbeddedData:
+        return links.concatWith(embedded).concatWith(_data);
+      case LinksDataEmbedded:
+        return links.concatWith(_data).concatWith(embedded);
+      case EmbeddedLinksData:
+        return embedded.concatWith(links).concatWith(_data);
+      case EmbeddedDataLinks:
+        return embedded.concatWith(_data).concatWith(links);
+      case DataLinksEmbedded:
+        return _data.concatWith(links).concatWith(embedded);
+      case DataEmbeddedLinks:
+        return _data.concatWith(embedded).concatWith(links);
+    }
+    return Observable.error(new RuntimeException());
+  }
+
+  private static Observable<JsonObject.Entry<JsonElement>> getData(
+    boolean lenient,
+    Observable<JsonObject.Entry<JsonElement>> data
+  ) {
+    return data.flatMap(e -> {
+      if (e.getKey().equals(Holder.LINKS) || e.getKey().equals(Holder.EMBEDDED)) {
+        if (lenient) {
+          return Observable.empty();
+        }
+        return Observable.error(new HalKeyException(String.format(Holder.DATA_CANNOT_USE_RESERVED_PROPERTY, e.getKey())));
+      }
+      return Observable.just(e);
+    });
+  }
+
+  private static Observable<JsonObject.Entry<JsonElement>> getEmbedded(
+    Map<String, Observable<HalObject>> singletonEmbedded,
+    Map<String, Observable<HalObject>> arrayEmbedded
+  ) {
+    return !singletonEmbedded.isEmpty() || !arrayEmbedded.isEmpty() ?
+      Observable.just(
+        JsonObject.entry(
+          Holder.EMBEDDED,
+          JsonObject.of(
+            Observable.from(singletonEmbedded.entrySet())
+              .flatMap(
+                e ->
+                  e.getValue()
+                    .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
+                    .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+              )
+              .concatWith(
+                Observable.from(arrayEmbedded.entrySet())
+                  .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
+              )
+          )
+        )
+      ) :
+      Observable.empty();
+  }
+
+  private static Observable<JsonObject.Entry<JsonElement>> getLinks(
+    Optional<HalLink> self,
+    Map<String, Observable<HalLink>> singletonLinks,
+    Map<String, Observable<HalLink>> arrayLinks,
+    boolean lenient
+  ) {
+    return self.isPresent() || !singletonLinks.isEmpty() || !arrayLinks.isEmpty() ?
+      Observable.just(
+        JsonObject.entry(
+          Holder.LINKS,
+          JsonObject.of(
+            self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(Holder.SELF, s))).orElse(Observable.empty())
+              .concatWith(
+                Observable.from(singletonLinks.entrySet())
+                  .flatMap(
+                    e ->
+                      e.getValue()
+                        .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
+                        .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+                  )
+                  .concatWith(
+                    Observable.from(arrayLinks.entrySet())
+                      .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
+                  )
+                  .flatMap(e -> {
+                    if (e.getKey().equals(Holder.SELF)) {
+                      if (lenient) {
+                        return Observable.empty();
+                      }
+                      return Observable.error(new HalKeyException(Holder.LINK_SELF_CAN_ONLY_BE_SET_USING_SELF));
+                    }
+                    return Observable.just(e);
+                  })
+              )
+          )
+        )
+      ) :
+      Observable.empty();
+  }
+
+  public enum Order {
+    LinksEmbeddedData,
+    LinksDataEmbedded,
+    EmbeddedLinksData,
+    EmbeddedDataLinks,
+    DataLinksEmbedded,
+    DataEmbeddedLinks
   }
 }

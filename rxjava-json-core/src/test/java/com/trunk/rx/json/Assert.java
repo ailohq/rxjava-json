@@ -22,4 +22,16 @@ public class Assert {
     ts.assertCompleted();
     ts.assertValue(gson.fromJson(out, Object.class));
   }
+
+  public static void assertEqualsString(Observable<JsonToken> in, String out) {
+    TestSubscriber<Object> ts = new TestSubscriber<>();
+
+    in.compose(RxJson.toJson())
+      .compose(StringObservable::stringConcat)
+      .subscribe(ts);
+
+    ts.assertNoErrors();
+    ts.assertCompleted();
+    ts.assertValue(out);
+  }
 }

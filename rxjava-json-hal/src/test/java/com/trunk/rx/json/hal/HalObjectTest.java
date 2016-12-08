@@ -10,6 +10,7 @@ import java.net.URI;
 import java.util.Collections;
 
 import static com.trunk.rx.json.Assert.assertEquals;
+import static com.trunk.rx.json.Assert.assertEqualsString;
 import static rx.Observable.just;
 
 public class HalObjectTest {
@@ -360,6 +361,78 @@ public class HalObjectTest {
           Observable.empty()
         ),
       "{\"a\":null}"
+    );
+  }
+
+  @Test
+  public void shouldOrderLinksEmbeddedData() throws Exception {
+    assertEqualsString(
+      HalObject.create()
+        .appendData("bar", RxJson.valueBuilder().create("baz"))
+        .putEmbedded("foo", HalObject.create())
+        .self(HalLink.create("/"))
+        .withOrder(HalObject.Order.LinksEmbeddedData),
+      "{\"_links\":{\"self\":{\"href\":\"/\"}},\"_embedded\":{\"foo\":{}},\"bar\":\"baz\"}"
+    );
+  }
+
+  @Test
+  public void shouldOrderLinksDataEmbedded() throws Exception {
+    assertEqualsString(
+      HalObject.create()
+        .appendData("bar", RxJson.valueBuilder().create("baz"))
+        .putEmbedded("foo", HalObject.create())
+        .self(HalLink.create("/"))
+        .withOrder(HalObject.Order.LinksDataEmbedded),
+      "{\"_links\":{\"self\":{\"href\":\"/\"}},\"bar\":\"baz\",\"_embedded\":{\"foo\":{}}}"
+    );
+  }
+
+  @Test
+  public void shouldOrderEmbeddedLinksData() throws Exception {
+    assertEqualsString(
+      HalObject.create()
+        .appendData("bar", RxJson.valueBuilder().create("baz"))
+        .putEmbedded("foo", HalObject.create())
+        .self(HalLink.create("/"))
+        .withOrder(HalObject.Order.EmbeddedLinksData),
+      "{\"_embedded\":{\"foo\":{}},\"_links\":{\"self\":{\"href\":\"/\"}},\"bar\":\"baz\"}"
+    );
+  }
+
+  @Test
+  public void shouldOrderEmbeddedDataLinks() throws Exception {
+    assertEqualsString(
+      HalObject.create()
+        .appendData("bar", RxJson.valueBuilder().create("baz"))
+        .putEmbedded("foo", HalObject.create())
+        .self(HalLink.create("/"))
+        .withOrder(HalObject.Order.EmbeddedDataLinks),
+      "{\"_embedded\":{\"foo\":{}},\"bar\":\"baz\",\"_links\":{\"self\":{\"href\":\"/\"}}}"
+    );
+  }
+
+  @Test
+  public void shouldOrderDataLinksEmbedded() throws Exception {
+    assertEqualsString(
+      HalObject.create()
+        .appendData("bar", RxJson.valueBuilder().create("baz"))
+        .putEmbedded("foo", HalObject.create())
+        .self(HalLink.create("/"))
+        .withOrder(HalObject.Order.DataLinksEmbedded),
+      "{\"bar\":\"baz\",\"_links\":{\"self\":{\"href\":\"/\"}},\"_embedded\":{\"foo\":{}}}"
+    );
+  }
+
+  @Test
+  public void shouldOrderDataEmbeddedLinks() throws Exception {
+    assertEqualsString(
+      HalObject.create()
+        .putEmbedded("foo", HalObject.create())
+        .appendData("bar", RxJson.valueBuilder().create("baz"))
+        .self(HalLink.create("/"))
+        .withOrder(HalObject.Order.DataEmbeddedLinks),
+      "{\"bar\":\"baz\",\"_embedded\":{\"foo\":{}},\"_links\":{\"self\":{\"href\":\"/\"}}}"
     );
   }
 }
