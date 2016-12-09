@@ -435,4 +435,34 @@ public class HalObjectTest {
       "{\"bar\":\"baz\",\"_embedded\":{\"foo\":{}},\"_links\":{\"self\":{\"href\":\"/\"}}}"
     );
   }
+
+  @Test
+  public void shouldSuppressNullLinks() throws Exception {
+    assertEquals(
+      HalObject.create()
+        .putLink("foo", Observable.empty())
+        .suppressNulls(),
+      "{_links={}}"
+    );
+  }
+
+  @Test
+  public void shouldSuppressNullEmbedded() throws Exception {
+    assertEquals(
+      HalObject.create()
+        .putEmbedded("foo", Observable.empty())
+        .suppressNulls(),
+      "{_embedded={}}"
+    );
+  }
+
+  @Test
+  public void shouldSuppressNullData() throws Exception {
+    assertEquals(
+      HalObject.create()
+        .appendData("foo", Observable.empty())
+        .suppressNulls(),
+      "{}"
+    );
+  }
 }

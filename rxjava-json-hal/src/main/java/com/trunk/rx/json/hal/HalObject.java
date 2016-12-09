@@ -34,7 +34,8 @@ public final class HalObject extends JsonElement {
         Collections.emptyMap(),
         Observable.empty(),
         false,
-        Order.LinksEmbeddedData
+        Order.LinksEmbeddedData,
+        false
       );
   }
 
@@ -46,6 +47,7 @@ public final class HalObject extends JsonElement {
   private final Observable<JsonObject.Entry<JsonElement>> data;
   private final boolean lenient;
   private final Order order;
+  private final boolean suppressNulls;
 
   /**
    * @return an immutable empty HalObject
@@ -62,11 +64,14 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalObject>> arrayEmbedded,
     Observable<JsonObject.Entry<JsonElement>> data,
     boolean lenient,
-    Order order
-  ) {
+    Order order,
+    boolean suppressNulls) {
     // this mess is to avoid empty objects in _links and _embedded
     super(
-      JsonObject.of(getOrderedElements(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order))
+      JsonObject.of(
+        getOrderedElements(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order, suppressNulls)
+      )
+        .suppressNulls(suppressNulls)
     );
 
     this.self = self;
@@ -77,6 +82,7 @@ public final class HalObject extends JsonElement {
     this.data = data;
     this.lenient = lenient;
     this.order = order;
+    this.suppressNulls = suppressNulls;
   }
 
   /**
@@ -86,7 +92,7 @@ public final class HalObject extends JsonElement {
    * @return an new HalObject
    */
   public HalObject lenient() {
-    return lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, true, order);
+    return lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, true, order, suppressNulls);
   }
 
   /**
@@ -95,7 +101,7 @@ public final class HalObject extends JsonElement {
    * @return an new HalObject
    */
   public HalObject strict() {
-    return !lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, false, order);
+    return !lenient ? this : new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, false, order, suppressNulls);
   }
 
   /**
@@ -105,7 +111,7 @@ public final class HalObject extends JsonElement {
    * @return a new HalObject with the self link set to the given value
    */
   public HalObject self(HalLink self) {
-    return new HalObject(Optional.of(self), singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order);
+    return new HalObject(Optional.of(self), singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order, suppressNulls);
   }
 
   /**
@@ -142,7 +148,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalLink>> newArray = new HashMap<>(arrayLinks);
     newSingleton.put(rel, link.take(1));
     newArray.remove(rel);
-    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order);
+    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order, suppressNulls);
   }
 
   /**
@@ -162,7 +168,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalLink>> newArray = new HashMap<>(arrayLinks);
     newSingleton.remove(rel);
     newArray.put(rel, links);
-    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order);
+    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order, suppressNulls);
   }
 
   /**
@@ -239,7 +245,7 @@ public final class HalObject extends JsonElement {
       );
     newSingleton.remove(rel);
     newArray.put(rel, newValue);
-    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order);
+    return new HalObject(self, newSingleton, newArray, singletonEmbedded, arrayEmbedded, data, lenient, order, suppressNulls);
   }
 
   /**
@@ -306,7 +312,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalObject>> newArray = new HashMap<>(arrayEmbedded);
     newSingleton.put(key, embedded.take(1));
     newArray.remove(key);
-    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order);
+    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order, suppressNulls);
   }
 
   /**
@@ -324,7 +330,7 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalObject>> newArray = new HashMap<>(arrayEmbedded);
     newSingleton.remove(key);
     newArray.put(key, embedded);
-    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order);
+    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order, suppressNulls);
   }
 
   /**
@@ -393,7 +399,7 @@ public final class HalObject extends JsonElement {
         );
     newSingleton.remove(key);
     newArray.put(key, newValue);
-    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order);
+    return new HalObject(self, singletonLinks, arrayLinks, newSingleton, newArray, data, lenient, order, suppressNulls);
   }
 
   /**
@@ -492,7 +498,7 @@ public final class HalObject extends JsonElement {
   public HalObject appendData(Observable<JsonObject.Entry<JsonElement>> data) {
     Objects.requireNonNull(data, "appendData requires a non-null data");
 
-    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, this.data.concatWith(data), lenient, order);
+    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, this.data.concatWith(data), lenient, order, suppressNulls);
   }
 
   /**
@@ -506,7 +512,15 @@ public final class HalObject extends JsonElement {
   public HalObject withOrder(Order order) {
     Objects.requireNonNull(order, "withOrder requires a non-null order");
 
-    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order);
+    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order, suppressNulls);
+  }
+
+  public HalObject suppressNulls() {
+    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order, true);
+  }
+
+  public HalObject suppressNulls(boolean suppress) {
+    return new HalObject(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order, suppress);
   }
 
   private void requireRelNotSelf(String rel) {
@@ -529,10 +543,11 @@ public final class HalObject extends JsonElement {
     Map<String, Observable<HalObject>> arrayEmbedded,
     Observable<JsonObject.Entry<JsonElement>> data,
     boolean lenient,
-    Order order
+    Order order,
+    boolean suppressNulls
   ) {
-    Observable<JsonObject.Entry<JsonElement>> links = getLinks(self, singletonLinks, arrayLinks, lenient);
-    Observable<JsonObject.Entry<JsonElement>> embedded = getEmbedded(singletonEmbedded, arrayEmbedded);
+    Observable<JsonObject.Entry<JsonElement>> links = getLinks(self, singletonLinks, arrayLinks, lenient, suppressNulls);
+    Observable<JsonObject.Entry<JsonElement>> embedded = getEmbedded(singletonEmbedded, arrayEmbedded, suppressNulls);
     Observable<JsonObject.Entry<JsonElement>> _data = getData(lenient, data);
 
     switch (order) {
@@ -569,7 +584,8 @@ public final class HalObject extends JsonElement {
 
   private static Observable<JsonObject.Entry<JsonElement>> getEmbedded(
     Map<String, Observable<HalObject>> singletonEmbedded,
-    Map<String, Observable<HalObject>> arrayEmbedded
+    Map<String, Observable<HalObject>> arrayEmbedded,
+    boolean suppressNulls
   ) {
     return !singletonEmbedded.isEmpty() || !arrayEmbedded.isEmpty() ?
       Observable.just(
@@ -581,7 +597,11 @@ public final class HalObject extends JsonElement {
                 e ->
                   e.getValue()
                     .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
-                    .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+                    .switchIfEmpty(
+                      suppressNulls ?
+                        Observable.empty() :
+                        Observable.just(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+                    )
               )
               .concatWith(
                 Observable.from(arrayEmbedded.entrySet())
@@ -597,7 +617,8 @@ public final class HalObject extends JsonElement {
     Optional<HalLink> self,
     Map<String, Observable<HalLink>> singletonLinks,
     Map<String, Observable<HalLink>> arrayLinks,
-    boolean lenient
+    boolean lenient,
+    boolean suppressNulls
   ) {
     return self.isPresent() || !singletonLinks.isEmpty() || !arrayLinks.isEmpty() ?
       Observable.just(
@@ -611,7 +632,11 @@ public final class HalObject extends JsonElement {
                     e ->
                       e.getValue()
                         .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
-                        .defaultIfEmpty(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+                        .switchIfEmpty(
+                          suppressNulls ?
+                            Observable.empty() :
+                            Observable.just(JsonObject.<JsonElement>entry(e.getKey(), RxJson.valueBuilder().Null()))
+                        )
                   )
                   .concatWith(
                     Observable.from(arrayLinks.entrySet())

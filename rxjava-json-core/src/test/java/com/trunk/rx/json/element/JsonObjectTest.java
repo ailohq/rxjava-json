@@ -37,4 +37,12 @@ public class JsonObjectTest {
       "{\"a\":null}"
     );
   }
+
+  @Test
+  public void testSuppressNulls() throws Exception {
+    assertEquals(
+      JsonObject.of().add("a", Observable.empty()).suppressNulls(),
+      "{}"
+    );
+  }
 }

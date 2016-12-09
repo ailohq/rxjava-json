@@ -157,7 +157,7 @@ TBC maven/gradle
 ### Parsing
 
 `RxJavaGson` adds an additional layer that will return java objects created using Gson.
-By default is uses the default Gson configuration and unmarshalls to an `Object`.
+By default it uses the default Gson configuration and unmarshalls to an `Object`.
 
 
 ```
