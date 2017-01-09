@@ -65,8 +65,8 @@ public final class HalObject extends JsonElement {
     Observable<JsonObject.Entry<JsonElement>> data,
     boolean lenient,
     Order order,
-    boolean suppressNulls) {
-    // this mess is to avoid empty objects in _links and _embedded
+    boolean suppressNulls
+  ) {
     super(
       JsonObject.of(
         getOrderedElements(self, singletonLinks, arrayLinks, singletonEmbedded, arrayEmbedded, data, lenient, order, suppressNulls)
@@ -571,7 +571,7 @@ public final class HalObject extends JsonElement {
     boolean lenient,
     Observable<JsonObject.Entry<JsonElement>> data
   ) {
-    return data.flatMap(e -> {
+    return data.concatMap(e -> {
       if (e.getKey().equals(Holder.LINKS) || e.getKey().equals(Holder.EMBEDDED)) {
         if (lenient) {
           return Observable.empty();
@@ -593,7 +593,7 @@ public final class HalObject extends JsonElement {
           Holder.EMBEDDED,
           JsonObject.of(
             Observable.from(singletonEmbedded.entrySet())
-              .flatMap(
+              .concatMap(
                 e ->
                   e.getValue()
                     .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
@@ -628,7 +628,7 @@ public final class HalObject extends JsonElement {
             self.map(s -> Observable.<JsonObject.Entry<JsonElement>>just(JsonObject.entry(Holder.SELF, s))).orElse(Observable.empty())
               .concatWith(
                 Observable.from(singletonLinks.entrySet())
-                  .flatMap(
+                  .concatMap(
                     e ->
                       e.getValue()
                         .map(v -> JsonObject.<JsonElement>entry(e.getKey(), v))
@@ -642,7 +642,7 @@ public final class HalObject extends JsonElement {
                     Observable.from(arrayLinks.entrySet())
                       .map(e -> JsonObject.entry(e.getKey(), JsonArray.of(e.getValue())))
                   )
-                  .flatMap(e -> {
+                  .concatMap(e -> {
                     if (e.getKey().equals(Holder.SELF)) {
                       if (lenient) {
                         return Observable.empty();

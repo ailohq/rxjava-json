@@ -58,7 +58,7 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
                                 getKeyValuePairTokens(entry.key, RxJson.valueBuilder().Null())
                             )
                     )
-                    .skip(1)
+                    .skip(1) // the first comma
             )
             .concatWith(Observable.just(JsonObjectEnd.instance()))
     );

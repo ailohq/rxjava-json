@@ -1,11 +1,28 @@
 package com.trunk.rx.json.element;
 
+import com.trunk.rx.json.RxJson;
 import org.testng.annotations.Test;
 import rx.Observable;
+import rx.schedulers.Schedulers;
+
+import java.util.stream.Stream;
 
 import static com.trunk.rx.json.Assert.assertEquals;
 
 public class JsonObjectTest {
+  @Test
+  public void shouldAcceptEntries() throws Exception {
+    assertEquals(
+      JsonObject.of(
+        Observable.just(
+          JsonObject.entry("a", JsonValueBuilder.instance().create("b")),
+          JsonObject.entry("c", JsonValueBuilder.instance().create("d"))
+        )
+      ),
+      "{\"a\":\"b\", \"c\":\"d\"}"
+    );
+  }
+
   @Test
   public void shouldAcceptSingleValue() throws Exception {
     assertEquals(

@@ -3,7 +3,7 @@ apply plugin: 'maven'
 
 group = 'com.trunk.rx.json'
 
-def baseVersion = '0.8.0'
+def baseVersion = '0.8.1'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8

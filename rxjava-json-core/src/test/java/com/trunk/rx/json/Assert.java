@@ -18,6 +18,8 @@ public class Assert {
       .map(s -> gson.fromJson(s, Object.class))
       .subscribe(ts);
 
+    ts.awaitTerminalEvent();
+
     ts.assertNoErrors();
     ts.assertCompleted();
     ts.assertValue(gson.fromJson(out, Object.class));
