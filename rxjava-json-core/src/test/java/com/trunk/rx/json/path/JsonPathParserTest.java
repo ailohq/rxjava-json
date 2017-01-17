@@ -111,11 +111,6 @@ public class JsonPathParserTest {
   }
 
   @Test(expectedExceptions = MalformedPathException.class)
-  public void shouldRejectArrayAfterObjectDot() throws Exception {
-    PARSER.parse("$.[*]");
-  }
-
-  @Test(expectedExceptions = MalformedPathException.class)
   public void shouldRejectUnclosedSingleQuote() throws Exception {
     PARSER.parse("$['foo]");
   }
@@ -201,6 +196,11 @@ public class JsonPathParserTest {
   }
 
   @Test
+  public void shouldAllowArrayAfterObjectDot() throws Exception {
+    assertEquals(PARSER.parse("$.[*]"), ImmutableList.of(RootToken.instance(), WildcardToken.array()));
+  }
+
+  @Test
   public void shouldAllowSlice() throws Exception {
     assertEquals(PARSER.parse("$[1:2]"), ImmutableList.of(RootToken.instance(), ArraySliceToken.of(1, 2)));
   }
@@ -254,6 +254,24 @@ public class JsonPathParserTest {
   public void shouldMatchDeepPath() throws Exception {
     assertEquals(
       PARSER.parse("$.foo['b a r'][*].*..bim.baz[5]"),
+      ImmutableList.of(
+        RootToken.instance(),
+        ObjectToken.of("foo"),
+        ObjectToken.of("b a r"),
+        WildcardToken.array(),
+        WildcardToken.object(),
+        RecursiveToken.instance(),
+        ObjectToken.of("bim"),
+        ObjectToken.of("baz"),
+        ArrayIndexToken.of(5)
+      )
+    );
+  }
+
+  @Test
+  public void shouldMatchDeepPathWithArrayDotSeparator() throws Exception {
+    assertEquals(
+      PARSER.parse("$.foo.['b a r'].[*].*..bim.baz.[5]"),
       ImmutableList.of(
         RootToken.instance(),
         ObjectToken.of("foo"),

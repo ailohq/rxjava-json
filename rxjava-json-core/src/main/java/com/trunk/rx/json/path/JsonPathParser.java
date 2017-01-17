@@ -169,6 +169,8 @@ public class JsonPathParser {
     } else if (path.currentCharIs('*')) {
       tokens.add(WildcardToken.object());
       path.incrementPosition(1);
+    } else if (path.currentCharIs('[')) {
+      readBracketToken(path, tokens);
     } else if (isNameStart(path.currentChar())) {
       int start = path.position();
       int end = start;
@@ -178,7 +180,7 @@ public class JsonPathParser {
       }
       tokens.add(ObjectToken.of(path.subSequence(start, end + 1).toString()));
     } else {
-      illegalCharacter(path, "*", NAME_START);
+      illegalCharacter(path, "*", "[", NAME_START);
     }
   }
 
