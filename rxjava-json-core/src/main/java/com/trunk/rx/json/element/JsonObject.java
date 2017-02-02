@@ -42,35 +42,34 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
 
   protected JsonObject(Observable<Entry<T>> elements, boolean suppressNulls) {
     super(
-        Observable.<JsonToken>just(JsonObjectStart.instance())
-            .concatWith(
-                elements
-                    .concatMap(
-                        entry ->
-                          entry.getValue().take(1)
-                            .flatMap(
-                              value ->
-                                getKeyValuePairTokens(entry.key, value)
-                            )
-                            .switchIfEmpty(
-                              suppressNulls ?
-                                Observable.empty() :
-                                getKeyValuePairTokens(entry.key, RxJson.valueBuilder().Null())
-                            )
-                    )
-                    .skip(1) // the first comma
+      Observable.<JsonToken>just(JsonObjectStart.instance())
+        .concatWith(
+          elements
+            .concatMap(
+              entry ->
+                entry.getValue().take(1)
+                  .flatMap(
+                    value ->
+                      getKeyValuePairTokens(entry.key, value)
+                  )
+                  .switchIfEmpty(
+                    suppressNulls ?
+                      Observable.empty() :
+                      getKeyValuePairTokens(entry.key, RxJson.valueBuilder().Null())
+                  )
             )
-            .concatWith(Observable.just(JsonObjectEnd.instance()))
-    );
+            .skip(1) // the first comma
+        )
+        .concatWith(Observable.just(JsonObjectEnd.instance())));
     this.elements = elements;
     this.suppressNulls = suppressNulls;
   }
 
   private static Observable<JsonToken> getKeyValuePairTokens(String key, JsonElement value) {
     return Observable.<JsonToken>just(JsonComma.instance())
-        .concatWith(Observable.just(JsonQuote.instance(), JsonName.of(key), JsonQuote.instance()))
-        .concatWith(Observable.just(JsonColon.instance()))
-        .concatWith(value);
+      .concatWith(Observable.just(JsonQuote.instance(), JsonName.of(key), JsonQuote.instance()))
+      .concatWith(Observable.just(JsonColon.instance()))
+      .concatWith(value);
   }
 
   public JsonObject<T> addAll(Observable<Entry<T>> elements) {

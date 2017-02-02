@@ -6,7 +6,7 @@ description = 'GSON extensions for RxJava-JSON'
 
 dependencies {
     compile project(':rxjava-json-core')
-    compile 'com.google.code.gson:gson:2.7'
+    compile 'com.google.code.gson:gson:2.8.0'
 
     testCompile 'com.google.guava:guava:19.0'
     testCompile group: 'io.reactivex', name: 'rxjava-string', version: '1.1.0'
