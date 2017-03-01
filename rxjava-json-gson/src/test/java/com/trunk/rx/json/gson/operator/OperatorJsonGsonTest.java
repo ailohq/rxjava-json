@@ -232,26 +232,26 @@ public class OperatorJsonGsonTest {
     ts.requestMore(1);
     ts.assertNoErrors();
     ts.assertNotCompleted();
+    ts.assertValueCount(1);
     assertEquals(emitted[0], 2);
-    assertEquals(ts.getOnNextEvents().size(), 1);
 
     ts.requestMore(1);
     ts.assertNoErrors();
     ts.assertNotCompleted();
+    ts.assertValueCount(2);
     assertEquals(emitted[0], 4);
-    assertEquals(ts.getOnNextEvents().size(), 2);
 
     ts.requestMore(1);
     ts.assertNoErrors();
     ts.assertNotCompleted();
+    ts.assertValueCount(3);
     assertEquals(emitted[0], 6);
-    assertEquals(ts.getOnNextEvents().size(), 3);
 
     ts.requestMore(1);
     ts.assertNoErrors();
     ts.assertCompleted();
+    ts.assertValueCount(4);
     assertEquals(emitted[0], 8);
-    assertEquals(ts.getOnNextEvents().size(), 4);
   }
 
   private JsonPathEvent event(JsonToken token) {

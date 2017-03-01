@@ -6,14 +6,20 @@ import com.google.gson.Gson;
 import com.trunk.rx.character.CharacterObservable;
 import com.trunk.rx.json.RxJson;
 import com.trunk.rx.json.element.JsonArray;
+import com.trunk.rx.json.gson.GsonPathEvent;
 import com.trunk.rx.json.gson.RxJsonGson;
+import com.trunk.rx.json.gson.operator.OperatorJsonGson;
+import com.trunk.rx.json.token.JsonObject;
 import com.trunk.rx.json.transformer.TransformerJsonPath;
+import com.trunk.rx.json.transformer.TransformerRxJson;
 import org.testng.annotations.Test;
 import rx.Observable;
 import rx.observables.StringObservable;
 import rx.observers.TestSubscriber;
 
 import java.util.Collections;
+
+import static org.testng.Assert.assertEquals;
 
 public class TransformerRxJsonGsonTest {
   @Test
@@ -170,6 +176,41 @@ public class TransformerRxJsonGsonTest {
         Object.class
       )
     );
-
   }
-}
+
+  @Test
+  public void shouldPassBackpressureUpstream() throws Exception {
+    TestSubscriber<Integer> ts = new TestSubscriber<>();
+    ts.requestMore(0);
+    int[] emitted = {0};
+    Observable.just("[")
+      .concatWith(Observable.range(0, 100).flatMap(i -> Observable.just(",", i.toString())).skip(1))
+      .concatWith(Observable.just("]"))
+      .doOnNext(e -> emitted[0] += 1)
+      .compose(TransformerRxJsonGson.from("$.[*]").to(Integer.class))
+      .subscribe(ts);
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(0);
+    assertEquals(emitted[0], 13);
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(0, 1);
+    assertEquals(emitted[0], 13);
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(0, 1, 2);
+    assertEquals(emitted[0], 13);
+
+    ts.requestMore(1);
+    ts.assertNoErrors();
+    ts.assertNotCompleted();
+    ts.assertValues(0, 1, 2, 3);
+    assertEquals(emitted[0], 15);
+  }}

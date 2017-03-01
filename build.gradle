@@ -3,7 +3,7 @@ apply plugin: 'maven'
 
 group = 'com.trunk.rx.json'
 
-def baseVersion = '0.8.2'
+def baseVersion = '0.9.0'
 
 sourceCompatibility = JavaVersion.VERSION_1_8
 targetCompatibility = JavaVersion.VERSION_1_8
@@ -24,7 +24,7 @@ configure(subprojects) {
     sourceCompatibility = 1.8
 
     dependencies {
-        compile 'io.reactivex:rxjava:1.1.1'
+        compile 'io.reactivex:rxjava:1.2.6'
         compile 'org.slf4j:slf4j-api:1.7.19'
 
         testCompile 'org.testng:testng:6.8'

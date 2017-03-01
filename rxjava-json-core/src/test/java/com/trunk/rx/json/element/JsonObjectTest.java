@@ -1,6 +1,7 @@
 package com.trunk.rx.json.element;
 
 import com.trunk.rx.json.RxJson;
+import com.trunk.rx.json.token.JsonNull;
 import org.testng.annotations.Test;
 import rx.Observable;
 import rx.schedulers.Schedulers;
@@ -56,10 +57,26 @@ public class JsonObjectTest {
   }
 
   @Test
-  public void testSuppressNulls() throws Exception {
+  public void testSuppressNullsFromEmptyValues() throws Exception {
     assertEquals(
       JsonObject.of().add("a", Observable.empty()).suppressNulls(),
       "{}"
+    );
+  }
+
+  @Test
+  public void testSuppressNullsFromNullValues() throws Exception {
+    assertEquals(
+      JsonObject.of().add("a", RxJson.valueBuilder().Null()).suppressNulls(),
+      "{}"
+    );
+  }
+
+  @Test
+  public void testNotSuppressNullsFromValue() throws Exception {
+    assertEquals(
+      JsonObject.of().add("a", RxJson.valueBuilder().create("b")).suppressNulls(),
+      "{\"a\":\"b\"}"
     );
   }
 }

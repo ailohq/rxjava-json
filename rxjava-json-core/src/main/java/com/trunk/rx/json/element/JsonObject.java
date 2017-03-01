@@ -48,6 +48,7 @@ public class JsonObject<T extends JsonElement> extends JsonElement {
             .concatMap(
               entry ->
                 entry.getValue().take(1)
+                  .filter(value -> !suppressNulls || !(value instanceof JsonNull))
                   .flatMap(
                     value ->
                       getKeyValuePairTokens(entry.key, value)

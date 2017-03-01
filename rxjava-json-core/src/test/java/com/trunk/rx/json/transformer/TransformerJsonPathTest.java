@@ -250,15 +250,15 @@ public class TransformerJsonPathTest {
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 1);
-    assertEquals(emitted[0], 2); // concatMap is eager on the next element
+    assertEquals(emitted[0], 4); // concatMap is eager on the next element
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 2);
-    assertEquals(emitted[0], 3);
+    assertEquals(emitted[0], 5);
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 3);
-    assertEquals(emitted[0], 4);
+    assertEquals(emitted[0], 5);
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 4);
@@ -298,35 +298,35 @@ public class TransformerJsonPathTest {
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 1);
-    assertEquals(emitted[0], 3); // concatMap is eager on the next element
+    assertEquals(emitted[0], 5); // concatMap is eager on the next element
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 2);
-    assertEquals(emitted[0], 4);
-
-    ts.requestMore(1);
-    assertEquals(ts.getOnNextEvents().size(), 3);
-    assertEquals(emitted[0], 5);
-
-    ts.requestMore(1);
-    assertEquals(ts.getOnNextEvents().size(), 4);
     assertEquals(emitted[0], 6);
 
     ts.requestMore(1);
-    assertEquals(ts.getOnNextEvents().size(), 5);
+    assertEquals(ts.getOnNextEvents().size(), 3);
     assertEquals(emitted[0], 7);
 
     ts.requestMore(1);
-    assertEquals(ts.getOnNextEvents().size(), 6);
+    assertEquals(ts.getOnNextEvents().size(), 4);
     assertEquals(emitted[0], 8);
 
     ts.requestMore(1);
-    assertEquals(ts.getOnNextEvents().size(), 7);
+    assertEquals(ts.getOnNextEvents().size(), 5);
     assertEquals(emitted[0], 9);
 
     ts.requestMore(1);
-    assertEquals(ts.getOnNextEvents().size(), 8);
+    assertEquals(ts.getOnNextEvents().size(), 6);
     assertEquals(emitted[0], 10);
+
+    ts.requestMore(1);
+    assertEquals(ts.getOnNextEvents().size(), 7);
+    assertEquals(emitted[0], 11);
+
+    ts.requestMore(1);
+    assertEquals(ts.getOnNextEvents().size(), 8);
+    assertEquals(emitted[0], 11);
 
     ts.requestMore(1);
     assertEquals(ts.getOnNextEvents().size(), 9);

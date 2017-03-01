@@ -6,7 +6,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.DoubleAdder;
 
 import com.trunk.rx.json.token.JsonBoolean;
-import com.trunk.rx.json.token.JsonNull;
 import com.trunk.rx.json.token.JsonNumber;
 import com.trunk.rx.json.token.JsonQuote;
 import com.trunk.rx.json.token.JsonString;
@@ -25,7 +24,7 @@ public class JsonValueBuilder {
     private static final int MAX_SAFE_EXPONENT = 1023;
     private static final int MIN_SAFE_EXPONENT = -1022;
     private static final JsonValueBuilder INSTANCE = new JsonValueBuilder();
-    private static final JsonElement NULL_ELEMENT = new JsonElement(JsonNull.instance());
+    private static final JsonNull NULL_ELEMENT = JsonNull.instance();
   }
 
   private final boolean lenient;
